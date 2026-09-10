@@ -21,7 +21,7 @@ export const SITE = {
 export const issuesUrl = `${SITE.repo}/issues`;
 
 /** The command shown in the hero, and the one the copy button copies. */
-export const HERO_CMD = 'npx verification-tax --org your-org --since 2024-09-01';
+export const HERO_CMD = 'npx verification-tax --org your-org --since 2025-09-01';
 export const CLOSER_CMD = 'npx verification-tax --org your-org';
 export const BENCH_CMD = 'npx verification-tax --org your-org --benchmark';
 
