@@ -8,9 +8,9 @@ export const SITE = {
   /** Bare domain, printed in the OG image and used as the Plausible site id. */
   domain: 'REPLACE-ME.example',
   /** GitHub repository, no trailing slash. */
-  repo: 'https://github.com/REPLACE-ME/verification-tax',
+  repo: 'https://github.com/tombradytech/verification-tax',
   /** Name printed in the footer byline. */
-  author: 'REPLACE-ME',
+  author: 'Tom Brady',
   /** Buttondown newsletter username. The API key is NEVER here - it is read
    *  from env.BUTTONDOWN_API_KEY inside the Pages Function. */
   buttondownUsername: 'REPLACE-ME',
