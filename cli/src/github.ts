@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
+import { parsePatch, type DiffFile } from './churn.js';
 
 const execFileAsync = promisify(execFile);
 const ENDPOINT = 'https://api.github.com/graphql';
@@ -128,6 +129,59 @@ export class Github {
       return body.data;
     }
     throw new Error('GitHub kept rate limiting or failing after 5 attempts.');
+  }
+
+  /** REST GET with the same rate-limit backoff as the GraphQL path. */
+  private async rest<T>(path: string): Promise<T | null> {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const res = await fetch(`https://api.github.com${path}`, {
+        headers: {
+          authorization: `bearer ${this.token}`,
+          accept: 'application/vnd.github+json',
+          'user-agent': 'verification-tax'
+        }
+      });
+      this.calls++;
+      if (res.status === 404) return null;
+      if (res.status === 401) throw new Error('GitHub rejected the token (401).');
+      if (res.status === 403 || res.status === 429) {
+        const wait = Number(res.headers.get('retry-after') ?? 0) || 2 ** attempt * 5;
+        this.log(`  rate limited, waiting ${wait}s...`);
+        await sleep(wait * 1000);
+        continue;
+      }
+      if (res.status >= 500) {
+        await sleep(2 ** attempt * 1000);
+        continue;
+      }
+      return (await res.json()) as T;
+    }
+    throw new Error('GitHub kept failing after 5 attempts.');
+  }
+
+  /**
+   * The diff of one PR, reduced to line ranges immediately.
+   *
+   * NOTE: this reads your source. It is only reached via --churn=line. Only the
+   * derived line numbers are ever kept, and nothing is transmitted anywhere,
+   * but the default path avoids diffs entirely so that "it does not read your
+   * code" stays literally true.
+   */
+  async pullDiffRanges(org: string, repo: string, number: number): Promise<DiffFile[]> {
+    const out: DiffFile[] = [];
+    for (let page = 1; page <= 3; page++) {
+      const files = await this.rest<RestFile[]>(
+        `/repos/${org}/${repo}/pulls/${number}/files?per_page=100&page=${page}`
+      );
+      if (!files?.length) break;
+      for (const f of files) {
+        if (!f.patch) continue; // binary, or too large for GitHub to return
+        const { added, removed } = parsePatch(f.patch);
+        if (added.length || removed.length) out.push({ path: f.filename, added, removed });
+      }
+      if (files.length < 100) break;
+    }
+    return out;
   }
 
   /**
@@ -282,6 +336,11 @@ function normalise(repo: string, n: RawPull): PullRequest {
     files: n.files.nodes.map((f) => ({ path: f.path, changes: f.additions + f.deletions })),
     filesTruncated: n.files.pageInfo.hasNextPage
   };
+}
+
+interface RestFile {
+  filename: string;
+  patch?: string;
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));

@@ -6,6 +6,7 @@ import { Github, cached, resolveToken, type PullRequest } from './github.js';
 import { buildLedger, type Window } from './model.js';
 import { renderTerminal } from './report/terminal.js';
 import { renderHtml } from './report/html.js';
+import { computeLineChurn, type ChurnResult, type PullDiff } from './churn.js';
 
 const VERSION = '0.1.0';
 
@@ -26,6 +27,14 @@ OPTIONS
                           will claim any authoring hours saved, because
                           without a before-and-after there is nothing to
                           infer a saving from.
+  --churn <file|line>     How to measure rework. Default: file.
+                          'file' asks whether a file was touched again. It is
+                          cheap and reads no code, but it saturates over long
+                          windows and drifts toward 100%.
+                          'line' asks whether the specific lines you added were
+                          later deleted. It is the real measurement, but it
+                          fetches diffs - which means it reads your source.
+                          Nothing is transmitted either way.
   --out <path>            HTML report path. Default: ./tax.html
   --no-cache              Ignore the on-disk cache and refetch.
   --json                  Emit machine-readable JSON on stdout instead.
@@ -48,6 +57,7 @@ interface Args {
   until?: string;
   baseline?: string;
   out: string;
+  churn: 'file' | 'line';
   cache: boolean;
   json: boolean;
   help: boolean;
@@ -58,6 +68,7 @@ interface Args {
 function parseArgs(argv: string[]): Args {
   const a: Args = {
     out: 'tax.html',
+    churn: 'file',
     cache: true,
     json: false,
     help: false,
@@ -77,6 +88,12 @@ function parseArgs(argv: string[]): Args {
       case '--until': a.until = next(); break;
       case '--baseline': a.baseline = next(); break;
       case '--out': a.out = next(); break;
+      case '--churn': {
+        const v = next();
+        if (v !== 'file' && v !== 'line') throw new Error("--churn must be 'file' or 'line'");
+        a.churn = v;
+        break;
+      }
       case '--no-cache': a.cache = false; break;
       case '--json': a.json = true; break;
       case '--benchmark': a.benchmark = true; break;
@@ -142,6 +159,43 @@ async function collect(
   return { ...result, fromCache: useCache && fromCache };
 }
 
+/**
+ * Fetches every PR's diff, reduced to line ranges. One REST call per PR, so
+ * this is the expensive path - eight at a time, with progress.
+ */
+async function collectDiffs(
+  gh: Github,
+  org: string,
+  pulls: PullRequest[],
+  note: (s: string) => void
+): Promise<PullDiff[]> {
+  const out: PullDiff[] = [];
+  let done = 0;
+  const queue = [...pulls];
+
+  const worker = async () => {
+    for (;;) {
+      const p = queue.pop();
+      if (!p) return;
+      try {
+        const files = await gh.pullDiffRanges(org, p.repo, p.number);
+        out.push({ repo: p.repo, number: p.number, mergedAt: p.mergedAt, files });
+      } catch (err) {
+        note(`      ${p.repo}#${p.number}: ${(err as Error).message}`);
+      }
+      if (++done % 50 === 0 || done === pulls.length) {
+        note(`  diffs ${done}/${pulls.length}`);
+      }
+    }
+  };
+
+  await Promise.all(Array.from({ length: 8 }, worker));
+  return out;
+}
+
+const cachedIf = <T>(use: boolean, cwd: string, key: string, produce: () => Promise<T>) =>
+  use ? cached(cwd, key, produce) : produce();
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
 
@@ -200,7 +254,19 @@ async function main() {
     baseline = { pulls: b.pulls, window: baselineWindow, repoCount: b.repoCount };
   }
 
-  const ledger = buildLedger(main.pulls, config, window, main.repoCount, baseline);
+  let churn: ChurnResult | undefined;
+  if (args.churn === 'line') {
+    note(`  Measuring line-level churn. This reads diffs (${main.pulls.length} requests).`);
+    const diffs = await cachedIf(
+      args.cache,
+      cwd,
+      `churn:v1:${args.org}:${since.toISOString()}:${until.toISOString()}`,
+      () => collectDiffs(gh, args.org!, main.pulls, note)
+    );
+    churn = computeLineChurn(diffs, config.rework.window_days);
+  }
+
+  const ledger = buildLedger(main.pulls, config, window, main.repoCount, baseline, churn);
   const outPath = resolve(cwd, args.out);
   const rel = (p: string) => './' + relative(cwd, p);
 

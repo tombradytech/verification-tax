@@ -98,14 +98,19 @@ export function renderTerminal(
   );
   L.push(
     stat(
-      `Lines in files re-touched <${cfg.rework.window_days}d`,
+      m.churnMethod === 'line'
+        ? `Added lines later deleted <${cfg.rework.window_days}d`
+        : `Lines in files re-touched <${cfg.rework.window_days}d`,
       `${m.reworkRate.toFixed(1)}%`,
-      `${num(m.reworkedLines)} of ${num(m.totalLines)} lines`
+      `${num(m.reworkedLines)} of ${num(m.totalLines)} lines` +
+        (m.churnMethod === 'file' ? ', file-level proxy' : '')
     )
   );
   L.push(
     stat(
-      'Review load, top decile',
+      // With ten or fewer reviewers the "top decile" is one person, which is a
+      // bus-factor statement, not a distribution. Say which one it is.
+      m.topDecileReviewerCount === 1 ? 'Review load, busiest reviewer' : 'Review load, top decile',
       `${m.topDecileReviewHoursPerWeek.toFixed(1)} h/wk`,
       m.reviewerCount
         ? `${num(m.topDecileReviewerCount)} of ${num(m.reviewerCount)} carry ` +
@@ -114,6 +119,13 @@ export function renderTerminal(
     )
   );
   L.push(stat('PR size, p50 / p90', `${num(m.prSizeP50)} / ${num(m.prSizeP90)}`, 'lines changed'));
+  L.push(
+    stat(
+      'Reviewers per reviewed PR',
+      m.reviewsPerReviewedPr.toFixed(2),
+      'why review hours are what they are'
+    )
+  );
   L.push('');
 
   L.push(bold('  DEBITS'));

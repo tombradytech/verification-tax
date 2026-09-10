@@ -35,18 +35,25 @@ export function renderHtml(
       `${num(m.unreviewedCount)} pull requests`
     ],
     [
-      `Lines in files re-touched <${cfg.rework.window_days}d`,
+      m.churnMethod === 'line'
+        ? `Added lines later deleted <${cfg.rework.window_days}d`
+        : `Lines in files re-touched <${cfg.rework.window_days}d`,
       `${m.reworkRate.toFixed(1)}%`,
       `${num(m.reworkedLines)} of ${num(m.totalLines)} lines; ${Math.round(cfg.rework.attribution_rate * 100)}% of those charged as rework`
     ],
     [
-      'Review load, top decile',
+      m.topDecileReviewerCount === 1 ? 'Review load, busiest reviewer' : 'Review load, top decile',
       `${m.topDecileReviewHoursPerWeek.toFixed(1)} h/wk`,
       m.reviewerCount
         ? `${num(m.topDecileReviewerCount)} of ${num(m.reviewerCount)} reviewers carry ${Math.round(m.topDecileShare * 100)}% of the load`
         : 'no human reviewers found in this window'
     ],
     ['PR size, p50 / p90', `${num(m.prSizeP50)} / ${num(m.prSizeP90)}`, 'lines changed per PR'],
+    [
+      'Reviewers per reviewed PR',
+      m.reviewsPerReviewedPr.toFixed(2),
+      'mean human reviewers on the PRs that got any review'
+    ],
     [
       'Delayed PRs',
       num(m.delayedPrCount),
@@ -172,9 +179,17 @@ export function renderHtml(
           : `<li><b>The credit side is not in this number at all.</b> No baseline window was given,
         so no authoring saving has been claimed. The net above is debits only.</li>`
       }
-      <li><b>Rework is measured at file level, not line level.</b> A line counts as reworked if the
-        file it landed in was changed again within ${cfg.rework.window_days} days, which overstates
-        churn in large or frequently-edited files.</li>
+      ${
+        m.churnMethod === 'line'
+          ? `<li><b>Churn is line-level but line numbers drift.</b> A line counts as reworked if a
+        later pull request deleted that line number from the same file within
+        ${cfg.rework.window_days} days. Intervening edits shift numbering, so individual
+        attributions can be wrong in both directions.</li>`
+          : `<li><b>Rework is measured at file level, not line level.</b> A line counts as reworked if
+        the file it landed in was changed again within ${cfg.rework.window_days} days. This
+        overstates churn badly over long windows - nearly every file is eventually touched again -
+        so it drifts toward 100%. Rerun with --churn=line for the real measurement.</li>`
+      }
       <li><b>Review that happened away from GitHub is invisible here.</b> Pairing, desk
         conversations and Slack threads are not counted, so diligent teams that talk more than they
         comment are undercounted.</li>

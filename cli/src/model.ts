@@ -1,6 +1,7 @@
 import type { TaxConfig } from './config.js';
 import type { PullRequest } from './github.js';
 import { computeMetrics, type Metrics } from './metrics.js';
+import type { ChurnResult } from './churn.js';
 
 export interface Line {
   label: string;
@@ -34,8 +35,11 @@ function debitsFor(m: Metrics, cfg: TaxConfig) {
   const k = annualise(m.windowDays);
 
   const reviewHours = (m.reviewMinutesTotal / 60) * k;
-  const reworkedAttributed = m.reworkedLines * cfg.rework.attribution_rate;
-  const reworkHours = (reworkedAttributed / cfg.rework.lines_per_hour) * k;
+  // The attribution rate exists to correct the file-level proxy, which flags
+  // whole files rather than lines. Line-level churn already knows exactly which
+  // lines were deleted, so discounting it would understate real rework.
+  const attribution = m.churnMethod === 'line' ? 1 : cfg.rework.attribution_rate;
+  const reworkHours = ((m.reworkedLines * attribution) / cfg.rework.lines_per_hour) * k;
   const delayCost = m.excessDelayDays * cfg.delay.cost_per_pr_per_day * k;
 
   const lines: Line[] = [
@@ -48,7 +52,10 @@ function debitsFor(m: Metrics, cfg: TaxConfig) {
       label: 'Rework on already-merged code',
       hoursPerYear: reworkHours,
       amount: reworkHours * cfg.hourly_cost,
-      note: `${Math.round(cfg.rework.attribution_rate * 100)}% of flagged lines attributed`
+      note:
+        m.churnMethod === 'line'
+          ? 'line-level, every deleted line charged'
+          : `${Math.round(attribution * 100)}% of flagged lines attributed (file-level proxy)`
     },
     {
       label: `Cost of delay, PRs over ${cfg.delay.threshold_days} days`,
@@ -129,9 +136,10 @@ export function buildLedger(
   cfg: TaxConfig,
   window: Window,
   repoCount: number,
-  baseline: { pulls: PullRequest[]; window: Window; repoCount: number } | null
+  baseline: { pulls: PullRequest[]; window: Window; repoCount: number } | null,
+  churn?: ChurnResult
 ): Ledger {
-  const metrics = computeMetrics(pulls, cfg, window, repoCount);
+  const metrics = computeMetrics(pulls, cfg, window, repoCount, churn);
   const baseMetrics = baseline
     ? computeMetrics(baseline.pulls, cfg, baseline.window, baseline.repoCount)
     : null;
@@ -140,7 +148,7 @@ export function buildLedger(
   const c = creditsFor(metrics, baseMetrics, cfg);
 
   const netAt = (variant: TaxConfig, dir: 1 | -1): number => {
-    const m = computeMetrics(pulls, variant, window, repoCount);
+    const m = computeMetrics(pulls, variant, window, repoCount, churn);
     const bm = baseline
       ? computeMetrics(baseline.pulls, variant, baseline.window, baseline.repoCount)
       : null;

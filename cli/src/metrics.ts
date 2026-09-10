@@ -1,5 +1,6 @@
 import type { TaxConfig } from './config.js';
 import type { PullRequest } from './github.js';
+import type { ChurnResult } from './churn.js';
 
 export interface Metrics {
   engineers: number;
@@ -15,7 +16,11 @@ export interface Metrics {
   unreviewedCount: number;
   pctMergedUnreviewed: number;
 
-  /** Share of merged lines that landed in files touched again inside the window. */
+  /**
+   * 'file' asks whether the file was touched again - cheap, but it saturates
+   * over long windows. 'line' asks whether the specific lines were deleted.
+   */
+  churnMethod: 'file' | 'line';
   reworkRate: number;
   reworkedLines: number;
   totalLines: number;
@@ -34,6 +39,9 @@ export interface Metrics {
   delayedPrCount: number;
   /** PR-days beyond the delay threshold, summed. */
   excessDelayDays: number;
+
+  /** Mean human reviewers on the PRs that got any review. Explains review hours. */
+  reviewsPerReviewedPr: number;
 
   filesTruncatedCount: number;
 }
@@ -73,7 +81,9 @@ export function computeMetrics(
   pulls: PullRequest[],
   cfg: TaxConfig,
   window: { since: Date; until: Date },
-  repoCount: number
+  repoCount: number,
+  /** When supplied, replaces the file-level churn proxy. */
+  churn?: ChurnResult
 ): Metrics {
   const windowDays = Math.max(1, Math.round((+window.until - +window.since) / MS_PER_DAY));
   const weeks = windowDays / 7;
@@ -135,6 +145,8 @@ export function computeMetrics(
 
   let reworkedLines = 0;
   let totalLines = 0;
+  let reviewerTotal = 0;
+  for (const p of pulls) reviewerTotal += p.reviewers.length;
   const reworkMs = cfg.rework.window_days * MS_PER_DAY;
   for (const list of touches.values()) {
     list.sort((a, b) => a.at - b.at);
@@ -167,9 +179,10 @@ export function computeMetrics(
     unreviewedCount: unreviewed,
     pctMergedUnreviewed: pulls.length ? (unreviewed / pulls.length) * 100 : 0,
 
-    reworkRate: totalLines ? (reworkedLines / totalLines) * 100 : 0,
-    reworkedLines,
-    totalLines,
+    churnMethod: churn ? 'line' : 'file',
+    reworkRate: churn ? churn.rate : totalLines ? (reworkedLines / totalLines) * 100 : 0,
+    reworkedLines: churn ? churn.reworkedLines : reworkedLines,
+    totalLines: churn ? churn.addedLines : totalLines,
 
     prSizeP50: Math.round(quantile(sortedSizes, 0.5)),
     prSizeP90: Math.round(quantile(sortedSizes, 0.9)),
@@ -182,6 +195,8 @@ export function computeMetrics(
 
     delayedPrCount,
     excessDelayDays,
+
+    reviewsPerReviewedPr: pulls.length - unreviewed ? reviewerTotal / (pulls.length - unreviewed) : 0,
 
     filesTruncatedCount
   };
