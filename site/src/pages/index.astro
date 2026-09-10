@@ -120,6 +120,13 @@ const description =
             reviewer count and elapsed time. Nobody is timing anyone.
           </li>
           <li>
+            <b>The credit side is softer than the debit side.</b> It cannot see which code AI wrote
+            &mdash; nothing can &mdash; so authoring hours saved are inferred from how your own
+            throughput changed across the window. Everything else that changed in that window is
+            credited to AI along with it: a hiring wave, a reorg, a quarter without a bad incident.
+            Read the debits as measured and the credit as assumed.
+          </li>
+          <li>
             <b>The coefficients are other people&rsquo;s research.</b> They are sourced and dated, and
             yours will differ. That is why they are in a text file rather than compiled in.
           </li>
@@ -132,6 +139,12 @@ const description =
             <b>It will flatter or damn you for reasons that predate AI.</b> A slow review culture in 2023
             is still a slow review culture now. Run it against a pre-2024 window first and read the delta,
             not the absolute.
+          </li>
+          <li>
+            <b>Your git conventions move the rework number.</b> Churn under 21 days is measured from
+            what lands on your default branch, so a squash-merge workflow and a merge-commit workflow
+            can report different rework rates for identical behaviour. Compare yourself to your own
+            earlier window before you compare yourself to anyone else.
           </li>
           <li>
             <b>It measures cost, not value.</b> A negative net is not automatically an argument to spend
