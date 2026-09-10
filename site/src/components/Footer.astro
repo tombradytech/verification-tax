@@ -15,8 +15,9 @@ const bare = SITE.repo.replace(/^https?:\/\//, '');
       <p>
         <b>What it does not do:</b> it does not detect which code was AI-written &mdash; nothing
         reliably can. It infers the shift from your own before-and-after, which is why the window
-        flag matters. It does not read your code. It does not open pull requests. It does not run in
-        CI, on purpose.
+        flag matters. It does not open pull requests. It does not run in CI, on purpose. It does
+        read your diffs &mdash; that is the only way to tell a rewritten line from an untouched one
+        &mdash; and it keeps the line numbers, not the lines.
       </p>
     )
   }

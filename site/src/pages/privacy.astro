@@ -31,8 +31,16 @@ const description =
     </p>
     <p>
       Your pull request metadata is read into memory, aggregated, and written to files next to you
-      &mdash; <code>./tax.html</code>, <code>./tax.config.json</code> and the board slide. Nothing is
-      uploaded. It never reads the contents of your code.
+      &mdash; <code>./tax.html</code> and <code>./tax.config.json</code>. Nothing is uploaded.
+    </p>
+    <p>
+      <b>It does read your diffs.</b> Measuring rework means asking whether a line you wrote was
+      later deleted, and there is no way to answer that without looking at the changes themselves.
+      So it fetches the diff of each merged pull request, reduces it to line numbers, and discards
+      the text. What is written to disk is arithmetic, never source. If you would rather it did not
+      look at all, <code>--churn file</code> uses a cruder measure that reads no diffs &mdash; it
+      only asks whether a file changed again, which overstates rework and gets worse the longer the
+      window.
     </p>
     <p>
       You do not have to take our word for any of that. The source is MIT and the network calls are

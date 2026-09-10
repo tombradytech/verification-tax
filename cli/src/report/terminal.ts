@@ -177,6 +177,14 @@ export function renderTerminal(
       dim('  The credit side is NOT in the net above. Pass --baseline <since>..<until> to claim it.')
     );
   }
+  if (m.churnMethod === 'file') {
+    L.push(
+      dim(
+        '  Churn is the file-level proxy (--churn file). It saturates over long windows;\n' +
+          '  drop the flag for the line-level measurement.'
+      )
+    );
+  }
   L.push(dim(`  Every coefficient lives in ${meta.configPath}. Disagree, edit, rerun.`));
   if (m.filesTruncatedCount) {
     L.push(

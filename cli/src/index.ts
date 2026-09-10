@@ -27,14 +27,16 @@ OPTIONS
                           will claim any authoring hours saved, because
                           without a before-and-after there is nothing to
                           infer a saving from.
-  --churn <file|line>     How to measure rework. Default: file.
-                          'file' asks whether a file was touched again. It is
-                          cheap and reads no code, but it saturates over long
-                          windows and drifts toward 100%.
+  --churn <line|file>     How to measure rework. Default: line.
                           'line' asks whether the specific lines you added were
-                          later deleted. It is the real measurement, but it
-                          fetches diffs - which means it reads your source.
-                          Nothing is transmitted either way.
+                          later deleted. This is the real measurement. It reads
+                          the diff of every merged PR, which costs one request
+                          each, so it is the slow part of a first run.
+                          'file' only asks whether a file was touched again. It
+                          is much faster and reads no diffs, but it saturates
+                          over long windows and drifts toward 100%, so treat it
+                          as a rough upper bound rather than a figure to quote.
+                          Neither mode transmits anything.
   --out <path>            HTML report path. Default: ./tax.html
   --no-cache              Ignore the on-disk cache and refetch.
   --json                  Emit machine-readable JSON on stdout instead.
@@ -68,7 +70,7 @@ interface Args {
 function parseArgs(argv: string[]): Args {
   const a: Args = {
     out: 'tax.html',
-    churn: 'file',
+    churn: 'line',
     cache: true,
     json: false,
     help: false,
@@ -90,7 +92,7 @@ function parseArgs(argv: string[]): Args {
       case '--out': a.out = next(); break;
       case '--churn': {
         const v = next();
-        if (v !== 'file' && v !== 'line') throw new Error("--churn must be 'file' or 'line'");
+        if (v !== 'file' && v !== 'line') throw new Error("--churn must be 'line' or 'file'");
         a.churn = v;
         break;
       }
@@ -129,7 +131,10 @@ async function collect(
 ): Promise<{ pulls: PullRequest[]; repoCount: number; fromCache: boolean }> {
   const since = window.since.toISOString();
   const until = window.until.toISOString();
-  const key = `v1:${org}:${since}:${until}`;
+  // Date granularity, not millisecond: --until defaults to "now", and a key
+  // containing the current timestamp would never match on a second run - which
+  // would quietly defeat the caching the front page promises.
+  const key = `v1:${org}:${since.slice(0, 10)}:${until.slice(0, 10)}`;
 
   let fromCache = true;
   const produce = async () => {
@@ -260,7 +265,8 @@ async function main() {
     const diffs = await cachedIf(
       args.cache,
       cwd,
-      `churn:v1:${args.org}:${since.toISOString()}:${until.toISOString()}`,
+      `churn:v1:${args.org}:${since.toISOString().slice(0, 10)}:` +
+        `${until.toISOString().slice(0, 10)}`,
       () => collectDiffs(gh, args.org!, main.pulls, note)
     );
     churn = computeLineChurn(diffs, config.rework.window_days);
