@@ -33,7 +33,7 @@ export const BENCHMARK_FIELDS = [
   ['median_time_to_first_review', 'Minutes from PR open to first review comment.'],
   ['median_time_in_review', 'Minutes from first review to merge.'],
   ['pct_merged_unreviewed', 'Percentage merged with no human review, to one decimal.'],
-  ['rework_rate', 'Percentage of merged lines changed again within 21 days.'],
+  ['rework_rate', 'Percentage of added lines a later PR deleted within 21 days.'],
   ['top_decile_review_hours', 'Weekly review hours carried by the busiest tenth.'],
   ['pr_size_p50', 'Median lines changed per pull request.'],
   ['pr_size_p90', '90th percentile lines changed per pull request.'],
