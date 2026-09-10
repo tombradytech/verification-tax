@@ -94,7 +94,7 @@ function creditsFor(m: Metrics, baseline: Metrics | null, cfg: TaxConfig) {
 
   const lines: Line[] = [
     {
-      label: 'Authoring hours saved',
+      label: hours < 0 ? 'Authoring hours lost' : 'Authoring hours saved',
       hoursPerYear: hours,
       amount: hours * cfg.hourly_cost,
       note:

@@ -20,7 +20,10 @@ export const money = (n: number, currency: string) =>
     style: 'currency',
     currency,
     maximumFractionDigits: 0
-  }).format(Math.round(n));
+  })
+    .format(Math.round(n))
+    // Intl emits a hyphen; the rest of the report uses a typographic minus.
+    .replace(/^-/, '\u2212');
 
 export function duration(mins: number | null): string {
   if (mins === null) return '—';
@@ -30,7 +33,8 @@ export function duration(mins: number | null): string {
 }
 
 const num = (n: number) => n.toLocaleString('en-IE');
-const hrs = (n: number) => `${Math.round(n).toLocaleString('en-IE')} h/yr`;
+const hrs = (n: number) =>
+  `${Math.round(n).toLocaleString('en-IE').replace(/^-/, '\u2212')} h/yr`;
 
 const STAT_VALUE_END = 44;
 const NOTE_COL = 48;
