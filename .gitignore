@@ -7,3 +7,8 @@ dist/
 .env
 .env.*
 !.env.example
+cli/dist/
+*.tgz
+tax.html
+tax.config.json
+.verification-tax-cache/

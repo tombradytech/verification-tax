@@ -1,0 +1,36 @@
+{
+  "name": "verification-tax",
+  "version": "0.1.0",
+  "description": "Reads your own GitHub history and prints what code review, rework and delay cost you. Runs locally, sends nothing.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "verification-tax": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20.6.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tombradytech/verification-tax.git"
+  },
+  "keywords": [
+    "github",
+    "code-review",
+    "engineering-metrics",
+    "dora",
+    "cli"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.2",
+    "typescript": "^7.0.2"
+  }
+}
