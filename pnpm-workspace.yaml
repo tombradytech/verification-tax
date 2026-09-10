@@ -1,0 +1,3 @@
+packages:
+  - 'site'
+  # - 'cli'   # the CLI lands here later

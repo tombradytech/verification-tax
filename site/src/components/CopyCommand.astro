@@ -1,0 +1,14 @@
+---
+interface Props {
+  cmd: string;
+  /** Reported to analytics so we can tell the hero button from the closing one. */
+  label: string;
+  style?: string;
+}
+const { cmd, label, style } = Astro.props;
+---
+
+<div class="cmd-block" style={style}>
+  <div class="cmd"><span class="p" aria-hidden="true">$</span>{cmd}</div>
+  <button class="copy" type="button" data-copy={cmd} data-label={label}>Copy</button>
+</div>

@@ -1,0 +1,30 @@
+---
+import Base from '../layouts/Base.astro';
+import Topbar from '../components/Topbar.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Base
+  title="You're on the list — verification-tax"
+  description="Confirmation that your address was recorded for the aggregate report."
+  path="/subscribed"
+>
+  <Topbar />
+  <main id="main" class="page">
+    <h1>Noted.</h1>
+    <p>
+      One email when the report publishes, and nothing else. No sequence, no drip, no newsletter.
+      Unsubscribe is a link in that email.
+    </p>
+    <p>
+      In the meantime the command does not need the report to be useful:
+      <code>npx verification-tax --org your-org</code>
+    </p>
+    <p>
+      <a href="/">Back to the front page</a> &middot; <a href="/privacy"
+        >What happens to your address</a
+      >
+    </p>
+  </main>
+  <Footer />
+</Base>

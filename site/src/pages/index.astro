@@ -1,0 +1,284 @@
+---
+import Base from '../layouts/Base.astro';
+import Topbar from '../components/Topbar.astro';
+import Footer from '../components/Footer.astro';
+import CopyCommand from '../components/CopyCommand.astro';
+import SubscribeForm from '../components/SubscribeForm.astro';
+import { SITE, BENCHMARK_FIELDS, HERO_CMD, CLOSER_CMD, BENCH_CMD } from '../config';
+
+const description =
+  'One command reads your own GitHub history and prints what code review, rework and delay ' +
+  'are costing you — against the time AI saved you writing the code. Runs locally, sends nothing.';
+---
+
+<Base title="verification-tax" description={description}>
+  <Topbar />
+
+  <main id="main">
+    <header class="hero">
+      <h1>You know what Copilot costs. You don&rsquo;t know what it costs to <em>check its work.</em></h1>
+      <p class="sub">
+        One command reads your own GitHub history and prints the second number &mdash; review hours,
+        rework, delay &mdash; against the time AI saved you writing the code. <b
+          >Your machine. Your token. Nothing sent anywhere.</b
+        >
+      </p>
+
+      <CopyCommand cmd={HERO_CMD} label="hero" />
+      <p class="cmd-note">
+        No account. No OAuth app. No data leaves your machine. <b
+          >MIT licensed &mdash; <a href={SITE.repo}>read the source</a> before you run it.</b
+        >
+      </p>
+    </header>
+
+    <section id="output" style="padding-top: 12px;">
+      <div class="term" tabindex="0" role="region" aria-label="Sample output of the verification-tax command"><pre><span class="d">  Reading 6,412 pull requests from acme (18 repos)...          [done]
+  Nothing sent anywhere. Report written to ./tax.html</span>
+
+<span class="h">  THE VERIFICATION TAX &mdash; acme, Sep 2025 &ndash; Sep 2026</span>
+
+  Engineers                            142
+  PRs merged                         6,412      <span class="d">+61% YoY</span>
+  Median time to first review       14h 20m     <span class="d">n=10 opted-in orgs</span>
+  Median time in review             31h 05m     <span class="d">n=10 opted-in orgs</span>
+  Merged with no human review          18.4%    <span class="d">1,180 PRs</span>
+  Rework rate (churn under 21d)        29.7%    <span class="r">412 later reverted</span>
+  Review load, top decile            11.4 h/wk  <span class="r">14 people carry 41%</span>
+
+<span class="h">  DEBITS</span>
+
+  Review hours consumed            18,940 h/yr  <span class="d">&euro;1,477,000</span>
+  Rework on already-merged code     6,210 h/yr  <span class="d">&euro;  484,000</span>
+  Cost of delay, PRs over 5 days         &mdash;      <span class="d">&euro;  212,000</span>
+  AI tooling spend                       &mdash;      <span class="d">&euro;  204,000</span>
+                                              <span class="d">&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;</span>
+                                               <span class="r">&euro;2,377,000</span>
+
+<span class="h">  CREDITS</span>
+
+  Authoring hours saved            21,300 h/yr  <span class="g">&euro;1,661,000</span>
+                                              <span class="d">&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;</span>
+<span class="h">  NET</span>                                          <span class="r">&minus;&euro;716,000</span>
+
+<span class="d">  Sensitivity: &minus;&euro;1.2M to +&euro;310k across the plausible range.
+  Every coefficient lives in ./tax.config.json. Disagree, edit, rerun.
+  Slide for the board meeting: ./tax-board-slide.png</span></pre></div>
+      <p class="term-cap">
+        Sample output. Your numbers will not look like this &mdash; that is rather the point.
+      </p>
+    </section>
+
+    <section id="why">
+      <h2>Three reasons this is worth one command</h2>
+      <div class="pillars">
+        <div class="pillar">
+          <span class="k" aria-hidden="true">01</span>
+          <h3>It is your org&rsquo;s number, not a survey of somebody else&rsquo;s</h3>
+          <p>
+            It reads your merged pull requests &mdash; how long they waited, how long they took, how
+            much got rewritten inside three weeks, how many shipped with no human ever looking
+            &mdash; and turns that into a figure with <b>your company&rsquo;s name on it</b>.
+          </p>
+          <p>Every benchmark report you have read this year was about other people&rsquo;s teams.</p>
+        </div>
+        <div class="pillar">
+          <span class="k" aria-hidden="true">02</span>
+          <h3>Nothing leaves your laptop, so nobody has to approve it</h3>
+          <p>
+            No account, no OAuth app, no vendor questionnaire, no DPA, no six-week security review
+            attached to a free thing. It uses the GitHub token already in your shell and writes an
+            HTML file next to it.
+          </p>
+          <p><b>You can run this before lunch without asking anyone.</b></p>
+        </div>
+        <div class="pillar">
+          <span class="k" aria-hidden="true">03</span>
+          <h3>It comes out as a slide, not another dashboard</h3>
+          <p>
+            One page for the meeting where somebody asks what the AI spend actually bought. Every
+            coefficient is sourced to DORA, METR, Faros and GitClear &mdash; and sits in a config
+            file <b>you can edit the moment you disagree</b>.
+          </p>
+          <p>
+            You are going to be asked this question. Better to have run the numbers yourself first.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="distrust">
+      <div class="distrust">
+        <h2>Reasons to distrust this number</h2>
+        <p class="lede">
+          Every tool in this category opens with why you should believe it. Here is the other list,
+          because you were going to work it out anyway and it is faster if we start there.
+        </p>
+        <ol>
+          <li>
+            <b>It is an estimate, not a stopwatch.</b> Review hours are inferred from pull request size,
+            reviewer count and elapsed time. Nobody is timing anyone.
+          </li>
+          <li>
+            <b>The coefficients are other people&rsquo;s research.</b> They are sourced and dated, and
+            yours will differ. That is why they are in a text file rather than compiled in.
+          </li>
+          <li>
+            <b>It cannot see the review that happened at a desk</b>, in a Slack thread, or in
+            someone&rsquo;s head on the walk home. It will undercount real diligence in teams that talk
+            more than they comment.
+          </li>
+          <li>
+            <b>It will flatter or damn you for reasons that predate AI.</b> A slow review culture in 2023
+            is still a slow review culture now. Run it against a pre-2024 window first and read the delta,
+            not the absolute.
+          </li>
+          <li>
+            <b>It measures cost, not value.</b> A negative net is not automatically an argument to spend
+            less. It is an argument to find out where the money is going.
+          </li>
+          <li>
+            <b>The peer set is self-selected and small.</b> It is made of orgs that already suspected they
+            had a review problem and went looking. That is not the industry, and percentiles only appear
+            once enough orgs have opted in for them to mean anything.
+          </li>
+          <li>
+            <b>The model can produce a positive net</b>, and for some orgs it does. If yours is negative
+            across the entire sensitivity range, that is a finding rather than a default.
+          </li>
+        </ol>
+        <p>
+          If any of that changes the answer materially, <a href={`${SITE.repo}/issues`}
+            >open an issue</a
+          >. The model is a single JSON file you can read in a minute, and being argued with in
+          public is the fastest way to make it right.
+        </p>
+      </div>
+    </section>
+
+    <section id="fit">
+      <h2 class="small">Whether this is for you</h2>
+      <div class="fit">
+        <div>
+          <h3>Run it if</h3>
+          <ul class="yes">
+            <li>You have ten or more engineers and at least a year of GitHub history</li>
+            <li>Someone above you has started asking what the AI tooling line item is returning</li>
+            <li>
+              Your senior engineers have said the word &ldquo;drowning&rdquo; out loud in the last
+              quarter
+            </li>
+            <li>You want a defensible figure before the budget conversation, not during it</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Don&rsquo;t bother if</h3>
+          <ul class="no">
+            <li>You are a handful of people &mdash; below about ten engineers the numbers are noise</li>
+            <li>You are on GitLab or Bitbucket &mdash; not yet, and the issue tracker is where to say so</li>
+            <li>You want a live dashboard. This is a command that prints a page and exits.</li>
+            <li>You need the number to come out a particular way</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="benchmark">
+      <div class="bench">
+        <h2 class="small">Optional: find out where you sit</h2>
+        <p class="lede">
+          The percentiles in the output come from orgs that chose to send theirs. If you want yours
+          included, and want to see where you land against everyone else who opted in:
+        </p>
+        <div class="flag">$ {BENCH_CMD}</div>
+        <p class="body">
+          That flag sends twelve integers and nothing else. No code, no file names, no repository
+          names, no company name, no email &mdash; unless you pass <code>--contact</code>. Here is the
+          entire payload:
+        </p>
+        <ul class="sends">
+          {BENCHMARK_FIELDS.map(([name]) => <li>{name}</li>)}
+        </ul>
+        <p class="body" style="max-width:62ch;">
+          When enough orgs have opted in, the aggregate publishes in full, free, with the dataset
+          attached &mdash; the first cross-org measurement of verification cost that isn&rsquo;t owned
+          by somebody selling into the category. If you want that when it lands:
+        </p>
+        <SubscribeForm />
+        <p class="mail-note">
+          One email, when the report is out. No sequence, no drip, no newsletter. Unsubscribe is a
+          link, not a conversation.
+        </p>
+      </div>
+    </section>
+
+    <section class="closer">
+      <h2>Run it on your own org before somebody runs it on you.</h2>
+      <CopyCommand cmd={CLOSER_CMD} label="closer" style="margin-top:24px;" />
+      <p class="cmd-note">
+        Minutes, not hours &mdash; and it caches, so the second run is instant. Nothing leaves your
+        machine. <a href={SITE.repo}>Source on GitHub</a>.
+      </p>
+    </section>
+  </main>
+
+  <Footer full />
+</Base>
+
+<script is:inline>
+  (function () {
+    var live = document.createElement('p');
+    live.className = 'visually-hidden';
+    live.setAttribute('role', 'status');
+    document.body.appendChild(live);
+
+    function flash(btn, text) {
+      var original = btn.textContent;
+      btn.textContent = 'Copied';
+      btn.classList.add('done');
+      live.textContent = text + ' copied to clipboard';
+      setTimeout(function () {
+        btn.textContent = original;
+        btn.classList.remove('done');
+        live.textContent = '';
+      }, 1800);
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll('button.copy'), function (btn) {
+      btn.addEventListener('click', function () {
+        var text = btn.getAttribute('data-copy');
+
+        function done() {
+          flash(btn, 'Command');
+          if (window.plausible) {
+            window.plausible('copy_command', { props: { which: btn.getAttribute('data-label') } });
+          }
+        }
+
+        function fallback() {
+          var ta = document.createElement('textarea');
+          ta.value = text;
+          ta.setAttribute('readonly', '');
+          ta.style.position = 'absolute';
+          ta.style.left = '-9999px';
+          document.body.appendChild(ta);
+          ta.select();
+          try {
+            document.execCommand('copy');
+            done();
+          } catch (e) {
+            btn.textContent = 'Press ⌘C';
+            live.textContent = 'Copy failed. Select the command and copy it manually.';
+          }
+          document.body.removeChild(ta);
+        }
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done, fallback);
+        } else {
+          fallback();
+        }
+      });
+    });
+  })();
+</script>

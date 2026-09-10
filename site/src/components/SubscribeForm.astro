@@ -1,0 +1,80 @@
+---
+import { SITE } from '../config';
+---
+
+<form class="mail" id="mailForm" action="/api/subscribe" method="post">
+  <input
+    type="email"
+    id="mailInput"
+    name="email"
+    placeholder="you@company.com"
+    aria-label="Email address"
+    autocomplete="email"
+    required
+  />
+  {/* Honeypot. Real people never fill this in; it costs nothing and needs no cookie. */}
+  <input
+    type="text"
+    name="company_website"
+    tabindex="-1"
+    autocomplete="off"
+    aria-hidden="true"
+    hidden
+  />
+  <button type="submit">Send me the aggregate</button>
+</form>
+
+<p class="mail-ok" id="mailOk" role="status" hidden>
+  Noted. One email when the report publishes, and nothing else.
+</p>
+
+<p class="mail-err" id="mailErr" role="alert" hidden>
+  That did not save, so nothing was recorded.
+  <span
+    >Try again in a moment. If it keeps failing, <a href={`${SITE.repo}/issues`}>open an issue</a> and
+    it will get fixed.</span
+  >
+</p>
+
+<script is:inline>
+  (function () {
+    var form = document.getElementById('mailForm');
+    var ok = document.getElementById('mailOk');
+    var err = document.getElementById('mailErr');
+    if (!form) return;
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var btn = form.querySelector('button');
+      var input = document.getElementById('mailInput');
+      if (!input.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+
+      err.hidden = true;
+      btn.setAttribute('aria-disabled', 'true');
+      btn.textContent = 'Sending…';
+
+      fetch(form.action, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          email: input.value,
+          company_website: form.elements['company_website'].value
+        })
+      })
+        .then(function (res) {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          form.hidden = true;
+          ok.hidden = false;
+        })
+        .catch(function () {
+          // Never show success for a write we could not confirm.
+          btn.removeAttribute('aria-disabled');
+          btn.textContent = 'Send me the aggregate';
+          err.hidden = false;
+        });
+    });
+  })();
+</script>

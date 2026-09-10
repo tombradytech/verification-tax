@@ -1,0 +1,78 @@
+---
+import Base from '../layouts/Base.astro';
+import Topbar from '../components/Topbar.astro';
+import Footer from '../components/Footer.astro';
+import { SITE, BENCHMARK_FIELDS, BENCH_CMD } from '../config';
+
+const description =
+  'The complete payload of the optional --benchmark flag: twelve integers, listed in full, ' +
+  'with what each one means.';
+---
+
+<Base
+  title="What --benchmark sends — verification-tax"
+  description={description}
+  path="/benchmark"
+>
+  <Topbar />
+
+  <main id="main" class="page">
+    <h1>What <code>--benchmark</code> sends</h1>
+    <p class="stamp">SCHEMA VERSION 1</p>
+
+    <p>
+      The flag is off unless you type it. When you do, this is the entire payload &mdash; twelve
+      integers, and nothing else.
+    </p>
+
+    <div class="flag">$ {BENCH_CMD}</div>
+
+    <div class="tbl-scroll">
+      <table class="fields">
+        <thead>
+          <tr>
+            <th scope="col">Field</th>
+            <th scope="col">What it is</th>
+          </tr>
+        </thead>
+        <tbody>
+          {
+            BENCHMARK_FIELDS.map(([name, desc]) => (
+              <tr>
+                <td class="name">{name}</td>
+                <td class="desc">{desc}</td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <h2>What is not in it</h2>
+    <p>
+      No source code. No file names, repository names or branch names. No commit messages. No author
+      names, usernames or email addresses. No company name. No IP-derived location. No free text of
+      any kind &mdash; every field above is a number, which is a stronger guarantee than a promise,
+      because a number has nowhere to hide a string.
+    </p>
+    <p>
+      If you pass <code>--contact</code> as well, an email address you type is attached so the report
+      can reach you. That is the only field that identifies anyone, and it only exists if you type
+      it.
+    </p>
+
+    <h2>Why bother</h2>
+    <p>
+      The percentiles in your own output are only meaningful if enough orgs have contributed to make
+      a distribution. Early on they will be thin, and the tool says so rather than pretending
+      otherwise. <a href="/report">The aggregate report</a> publishes free with the dataset attached
+      when the sample is large enough to survive scrutiny.
+    </p>
+    <p>
+      The submission code is in the repository like everything else. If the payload ever stops
+      matching this table, that is a bug worth <a href={`${SITE.repo}/issues`}>filing</a>.
+    </p>
+  </main>
+
+  <Footer />
+</Base>

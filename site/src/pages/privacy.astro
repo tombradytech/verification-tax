@@ -1,0 +1,101 @@
+---
+import Base from '../layouts/Base.astro';
+import Topbar from '../components/Topbar.astro';
+import Footer from '../components/Footer.astro';
+import { SITE, BENCHMARK_FIELDS } from '../config';
+
+const description =
+  'What the CLI sends (nothing), what the optional --benchmark flag sends (twelve integers), ' +
+  'and what this website records.';
+---
+
+<Base title="Privacy — verification-tax" description={description} path="/privacy">
+  <Topbar />
+
+  <main id="main" class="page">
+    <h1>Privacy</h1>
+    <p class="stamp">LAST UPDATED 6 SEPTEMBER 2026</p>
+
+    <p>
+      This page is short because there is not much to describe. If anything here turns out to be
+      untrue, that is a bug and <a href={`${SITE.repo}/issues`}>the issue tracker</a> is the place for
+      it.
+    </p>
+
+    <h2>The command-line tool</h2>
+    <p>
+      <code>npx verification-tax</code> makes two kinds of network request: npm serves it to you, and
+      it reads the GitHub API using the token already in your environment. <b
+        >It sends nothing to us.</b
+      > No account, no telemetry, no crash reporting, no phone-home version check.
+    </p>
+    <p>
+      Your pull request metadata is read into memory, aggregated, and written to files next to you
+      &mdash; <code>./tax.html</code>, <code>./tax.config.json</code> and the board slide. Nothing is
+      uploaded. It never reads the contents of your code.
+    </p>
+    <p>
+      You do not have to take our word for any of that. The source is MIT and the network calls are
+      the easiest thing in it to audit.
+    </p>
+
+    <h2>The optional --benchmark flag</h2>
+    <p>
+      This is off unless you type it. When you do pass <code>--benchmark</code>, the tool sends
+      twelve integers describing the shape of your engineering org, and nothing else:
+    </p>
+    <ul>
+      {BENCHMARK_FIELDS.map(([name]) => <li><code>{name}</code></li>)}
+    </ul>
+    <p>
+      There is no code, no file name, no repository name, no branch name, no author name, no company
+      name and no email address in that payload. <a href="/benchmark">The full field list, with what
+      each one means</a>, is on its own page.
+    </p>
+    <p>
+      If you additionally pass <code>--contact</code>, an email address you type is attached, so the
+      aggregate report can be sent to you when it publishes. That is the only circumstance in which
+      the tool transmits anything that identifies you.
+    </p>
+
+    <h2>This website</h2>
+    <p>
+      The site is static files. There are no cookies, no local storage, no fingerprinting, no
+      advertising or tracking pixels, and consequently no consent banner to dismiss.
+    </p>
+    <ul>
+      <li>
+        <b>Analytics.</b> Plausible, which counts page views and referrers in aggregate without
+        cookies and without storing anything that identifies a person. One custom event fires when
+        you click a Copy button, so we can tell whether people actually take the command. That is
+        the entire list.
+      </li>
+      <li>
+        <b>Email signups.</b> If you give us an address for the aggregate report, it is stored by
+        Buttondown, who send the mail. One email, when the report is out. Every message carries a
+        one-click unsubscribe.
+      </li>
+      <li>
+        <b>Hosting.</b> Cloudflare Pages serves the files and, like any web server, sees the IP
+        addresses that request them.
+      </li>
+    </ul>
+
+    <div class="callout">
+      <p>
+        No data collected here is sold, rented, shared with advertisers, or used to build a profile
+        of you. There is nothing to sell it to.
+      </p>
+    </div>
+
+    <h2>Getting your data removed</h2>
+    <p>
+      For the mailing list, use the unsubscribe link in any email, or <a
+        href={`${SITE.repo}/issues`}>open an issue</a
+      >. Benchmark submissions carry no identifier, so there is nothing in them to find and delete
+      unless you passed <code>--contact</code>; if you did, the same routes apply.
+    </p>
+  </main>
+
+  <Footer />
+</Base>

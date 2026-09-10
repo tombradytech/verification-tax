@@ -1,0 +1,28 @@
+---
+import Base from '../layouts/Base.astro';
+import Topbar from '../components/Topbar.astro';
+import Footer from '../components/Footer.astro';
+import { SITE } from '../config';
+---
+
+<Base
+  title="That did not save — verification-tax"
+  description="The signup could not be recorded. Nothing was stored."
+  path="/subscribe-failed"
+>
+  <Topbar />
+  <main id="main" class="page">
+    <h1>That did not save.</h1>
+    <p>
+      <b>Nothing was recorded.</b> Rather than show you a success message we could not stand over, here
+      is the failure.
+    </p>
+    <p>
+      Try again in a moment. If it keeps failing, <a href={`${SITE.repo}/issues`}>open an issue</a> and
+      it will get fixed &mdash; a signup form that silently drops addresses would be a poor advertisement
+      for a tool whose entire argument is about being straight with you.
+    </p>
+    <p><a href="/#benchmark">Back to the form</a></p>
+  </main>
+  <Footer />
+</Base>

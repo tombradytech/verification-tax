@@ -1,0 +1,21 @@
+{
+  "name": "verification-tax",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.3.0"
+  },
+  "packageManager": "pnpm@10.12.4",
+  "scripts": {
+    "dev": "pnpm --filter @verification-tax/site dev",
+    "build": "pnpm --filter @verification-tax/site build",
+    "preview": "pnpm --filter @verification-tax/site preview",
+    "fonts": "node scripts/fonts.mjs",
+    "og": "node scripts/og.mjs"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260906.1",
+    "@resvg/resvg-js": "^2.6.2",
+    "satori": "^0.33.4"
+  }
+}

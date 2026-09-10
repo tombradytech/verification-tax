@@ -1,0 +1,83 @@
+---
+import { SITE } from '../config';
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description: string;
+  /** Path with a leading slash, e.g. "/privacy". Home is "". */
+  path?: string;
+  ogAlt?: string;
+}
+
+const { title, description, path = '', ogAlt } = Astro.props;
+const canonical = `${SITE.origin}${path}`;
+const ogImage = `${SITE.origin}/og.png`;
+const defaultAlt =
+  'Terminal output reading: DEBITS, review hours and rework and cost of delay ' +
+  'and AI tooling spend totalling 2,377,000 euro; CREDITS, authoring hours ' +
+  'saved 1,661,000 euro; NET minus 716,000 euro.';
+
+/* Queue stub so the single custom event survives a slow or blocked script. */
+const plausibleStub =
+  'window.plausible=window.plausible||function(){(window.plausible.q=window.plausible.q||[]).push(arguments)}';
+
+const FONTS = [
+  'instrument-sans-var.woff2',
+  'instrument-serif-400.woff2',
+  'instrument-serif-400-italic.woff2',
+  'dm-mono-400.woff2',
+  'dm-mono-500.woff2'
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+
+    {
+      FONTS.map((f) => (
+        <link rel="preload" href={`/fonts/${f}`} as="font" type="font/woff2" crossorigin />
+      ))
+    }
+
+    <meta property="og:site_name" content="verification-tax" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:alt" content={ogAlt ?? defaultAlt} />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+    <meta name="twitter:image:alt" content={ogAlt ?? defaultAlt} />
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+
+    {
+      SITE.analytics && (
+        <Fragment>
+          <script is:inline defer data-domain={SITE.domain} src="https://plausible.io/js/script.js" />
+          <script is:inline set:html={plausibleStub} />
+        </Fragment>
+      )
+    }
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <div class="wrap">
+      <slot />
+    </div>
+  </body>
+</html>

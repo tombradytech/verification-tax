@@ -1,0 +1,66 @@
+---
+import Base from '../layouts/Base.astro';
+import Topbar from '../components/Topbar.astro';
+import Footer from '../components/Footer.astro';
+import SubscribeForm from '../components/SubscribeForm.astro';
+import { SITE } from '../config';
+
+const description =
+  'The cross-org aggregate of verification cost. Not published yet — here is what it will ' +
+  'contain and what has to be true before it ships.';
+---
+
+<Base title="The aggregate report — verification-tax" description={description} path="/report">
+  <Topbar />
+
+  <main id="main" class="page">
+    <h1>The aggregate report</h1>
+    <p class="stamp">NOT PUBLISHED YET</p>
+
+    <p>
+      There is no report on this page because there is not yet enough data to write one that would
+      survive being read carefully. This page exists so that the claim on the home page has
+      somewhere honest to point.
+    </p>
+
+    <h2>What it will be</h2>
+    <ul>
+      <li>
+        The distribution of review load, rework rate, time to first review and unreviewed merge rate
+        across every org that opted in.
+      </li>
+      <li>
+        The full dataset attached, as the twelve integers per org and nothing more, so anyone can
+        redo the analysis and disagree with it.
+      </li>
+      <li>The method, the coefficients, and every place the model is doing something arguable.</li>
+      <li>Free, on this page, with no email required to read it.</li>
+    </ul>
+
+    <h2>What has to be true first</h2>
+    <p>
+      Enough opted-in orgs that the percentiles are not just describing a handful of companies who
+      already knew they had a problem. Until then the tool reports the sample size next to every
+      percentile, so you can discount it yourself.
+    </p>
+
+    <div class="callout">
+      <p>
+        <b>The sample is self-selected and that will not stop being true.</b> Orgs that go looking for
+        a review problem are not a random draw from the industry. The report will say so at the top, not
+        in a footnote, and the raw data will be there for anyone who wants to argue about it.
+      </p>
+    </div>
+
+    <h2>Tell me when it lands</h2>
+    <p>One email, when the report is out. No sequence, no drip, no newsletter.</p>
+    <SubscribeForm />
+    <p class="mail-note">
+      Unsubscribe is a link, not a conversation. What happens to the address is on <a
+        href="/privacy">the privacy page</a
+      >.
+    </p>
+  </main>
+
+  <Footer />
+</Base>

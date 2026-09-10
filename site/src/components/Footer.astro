@@ -1,0 +1,41 @@
+---
+import { SITE } from '../config';
+
+interface Props {
+  /** The home page footer carries the "what it does not do" paragraph. */
+  full?: boolean;
+}
+const { full = false } = Astro.props;
+const bare = SITE.repo.replace(/^https?:\/\//, '');
+---
+
+<footer id="repo">
+  {
+    full && (
+      <p>
+        <b>What it does not do:</b> it does not detect which code was AI-written &mdash; nothing
+        reliably can. It infers the shift from your own before-and-after, which is why the window
+        flag matters. It does not read your code. It does not open pull requests. It does not run in
+        CI, on purpose.
+      </p>
+    )
+  }
+  <p>
+    Built by {SITE.author}, who spent a decade shipping payments infrastructure and got tired of
+    guessing at this number. If it is wrong for your org, the <a href={`${SITE.repo}/issues`}
+      >issue tracker</a
+    > is the fastest way to make it less wrong.
+  </p>
+  <nav class="foot-nav" aria-label="Footer">
+    <a href="/privacy">Privacy</a>
+    <a href="/benchmark">What --benchmark sends</a>
+    <a href="/report">The aggregate report</a>
+    <a href={SITE.repo}>Source</a>
+  </nav>
+  <div class="foot-meta">
+    <span>MIT</span>
+    <span>{bare}</span>
+    <span>npx verification-tax</span>
+    <span>No telemetry, ever</span>
+  </div>
+</footer>
