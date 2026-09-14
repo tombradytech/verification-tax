@@ -263,6 +263,22 @@ export function renderTerminal(
       )
     );
   }
+
+  // Land on something that needs no coefficient. Everything above this line
+  // depends on numbers in a config file; this one is a count from the reviews
+  // API, and it is the figure most likely to survive an argument.
+  L.push('');
+  L.push(dim('  Every figure above rests on a coefficient you can argue with.'));
+  L.push(dim('  This one does not:'));
+  L.push(
+    bold(
+      m.unreviewedCount
+        ? `  ${m.pctMergedUnreviewed.toFixed(1)}% of merged pull requests had no human reviewer. ` +
+            `${num(m.unreviewedCount)} of them.`
+        : '  Every merged pull request in this window had a human reviewer.'
+    )
+  );
+
   L.push('');
   return L.join('\n');
 }
