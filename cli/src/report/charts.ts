@@ -1,6 +1,48 @@
 import type { Period, SeriesSpec, Trend } from '../series.js';
-import { trendOf } from '../series.js';
 import { durationShort } from './terminal.js';
+
+/** One point on a chart: a labelled period and one value per line. */
+export interface ChartPoint {
+  label: string;
+  full: string;
+  values: (number | null)[];
+}
+
+/** A chart's presentation, independent of where its numbers came from. */
+export interface CardSpec {
+  title: string;
+  lineNames: string[];
+  format: SeriesSpec['format'];
+  better: SeriesSpec['better'];
+  note: string;
+}
+
+/** Turns the org-wide series definitions into chart points. */
+export const pointsFor = (spec: SeriesSpec, periods: Period[]): ChartPoint[] =>
+  periods.map((p) => ({
+    label: p.label,
+    full: p.full,
+    values: spec.lines.map((l) => l.pick(p.metrics))
+  }));
+
+export const cardSpecFor = (spec: SeriesSpec): CardSpec => ({
+  title: spec.title,
+  lineNames: spec.lines.map((l) => l.name),
+  format: spec.format,
+  better: spec.better,
+  note: spec.note
+});
+
+/** Mean of the first half of the values against the mean of the second. */
+function trendOfValues(values: (number | null)[]): Trend {
+  const real = values.filter((v): v is number => v !== null);
+  if (real.length < 2) return { first: null, last: null, change: null };
+  const mid = Math.floor(real.length / 2);
+  const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
+  const first = mean(real.slice(0, mid));
+  const last = mean(real.slice(mid));
+  return { first, last, change: first && last !== null ? (last - first) / Math.abs(first) : null };
+}
 
 const num = (n: number) => Math.round(n).toLocaleString('en-IE');
 
@@ -73,8 +115,9 @@ function trendBadge(trend: Trend, better: SeriesSpec['better']): string {
 }
 
 /** One small-multiple card: title, latest value, trend, and the line chart. */
-export function chartCard(spec: SeriesSpec, periods: Period[]): string {
-  const series = spec.lines.map((l) => periods.map((p) => l.pick(p.metrics)));
+export function chartCard(spec: CardSpec, points: ChartPoint[]): string {
+  const lineCount = spec.lineNames.length;
+  const series = Array.from({ length: lineCount }, (_, li) => points.map((p) => p.values[li] ?? null));
   const flat = series.flat().filter((v): v is number => v !== null);
 
   if (!flat.length) {
@@ -89,9 +132,9 @@ export function chartCard(spec: SeriesSpec, periods: Period[]): string {
   const max = Math.max(...flat);
 
   // On a p50/p90 pair the tail is the signal - "is it getting worse" is a
-  // question about the slow PRs, not the instant ones - so trend the last line.
-  const primary = spec.lines.at(-1)!;
-  const trend = trendOf(periods, primary.pick);
+  // question about the slow pull requests, not the instant ones.
+  const primaryIndex = lineCount - 1;
+  const trend = trendOfValues(series[primaryIndex]!);
   const latest = series
     .map((values) => formatValue(values.filter((v): v is number => v !== null).at(-1) ?? null, spec.format))
     .join(' / ');
@@ -108,48 +151,39 @@ export function chartCard(spec: SeriesSpec, periods: Period[]): string {
     .join('');
 
   const legend =
-    spec.lines.length > 1
-      ? `<span class="lg"><i class="k1"></i>${spec.lines[0]!.name}` +
-        `<i class="k2" style="margin-left:10px"></i>${spec.lines[1]!.name}</span>`
+    lineCount > 1
+      ? `<span class="lg"><i class="k1"></i>${spec.lineNames[0]}` +
+        `<i class="k2" style="margin-left:10px"></i>${spec.lineNames[1]}</span>`
       : '';
 
-  const firstLabel = periods[0]?.label ?? '';
-  const lastLabel = periods.at(-1)?.label ?? '';
+  const firstLabel = points[0]?.label ?? '';
+  const lastLabel = points.at(-1)?.label ?? '';
+  const midLabel = points[Math.floor((points.length - 1) / 2)]?.label ?? '';
 
-  const midLabel = periods[Math.floor((periods.length - 1) / 2)]?.label ?? '';
-
-  // One full-height column per period. Hovering anywhere in the column shows
-  // the tooltip, so this stays usable at 90 daily points where individual dots
-  // would be three pixels apart. Pure CSS - the report ships no script.
-  const n = periods.length;
+  const n = points.length;
   const colWidth = 100 / n;
   const yPct = (v: number) => {
     const span = max - min || 1;
     return ((H - PAD - ((v - min) / span) * (H - PAD * 2)) / H) * 100;
   };
 
-  const overlay = periods
-    .map((period, i) => {
-      const values = spec.lines.map((l) => l.pick(period.metrics));
-      const dots = values
-        .map((v, li) =>
-          v === null
-            ? ''
-            : `<i class="d${li + 1}" style="top:${yPct(v).toFixed(1)}%"></i>`
-        )
+  // One full-height column per period. Hovering anywhere in the column shows
+  // the tooltip, so this stays usable at 90 daily points where individual dots
+  // would be three pixels apart. Pure CSS - the report ships no script.
+  const overlay = points
+    .map((point, i) => {
+      const dots = point.values
+        .map((v, li) => (v === null ? '' : `<i class="d${li + 1}" style="top:${yPct(v).toFixed(1)}%"></i>`))
         .join('');
-      const readout = spec.lines
-        .map((l, li) => `${spec.lines.length > 1 ? l.name + ' ' : ''}${formatValue(values[li] ?? null, spec.format)}`)
+      const readout = spec.lineNames
+        .map((name, li) => `${lineCount > 1 ? name + ' ' : ''}${formatValue(point.values[li] ?? null, spec.format)}`)
         .join(' · ');
-      // Horizontally: anchor inward at the edges so the card does not clip it.
       const side = i < n / 2 ? 'left:0' : 'right:0';
-      // Vertically: sit just above the point, or below it when the point is
-      // already near the top - otherwise the tooltip covers the card's title.
-      const primaryValue = values[values.length - 1];
+      const primaryValue = point.values[primaryIndex];
       const y = primaryValue === null || primaryValue === undefined ? 50 : yPct(primaryValue);
       const vertical =
         y < 45 ? `top:calc(${y.toFixed(1)}% + 10px)` : `bottom:calc(${(100 - y).toFixed(1)}% + 10px)`;
-      return `<span class="pt" style="left:${(i * colWidth).toFixed(3)}%;width:${colWidth.toFixed(3)}%">${dots}<span class="tip" style="${side};${vertical}"><b>${period.full}</b>${readout}</span></span>`;
+      return `<span class="pt" style="left:${(i * colWidth).toFixed(3)}%;width:${colWidth.toFixed(3)}%">${dots}<span class="tip" style="${side};${vertical}"><b>${point.full}</b>${readout}</span></span>`;
     })
     .join('');
 
@@ -167,7 +201,7 @@ export function chartCard(spec: SeriesSpec, periods: Period[]): string {
         </div>
         <div class="canvas">
       <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
-           aria-label="${spec.title}${spec.lines.length > 1 ? ' (' + primary.name + ')' : ''}: ${formatValue(trend.first, spec.format)} in the first half of the window, ${formatValue(trend.last, spec.format)} in the second.">
+           aria-label="${spec.title}${lineCount > 1 ? ' (' + spec.lineNames[primaryIndex] + ')' : ''}: ${formatValue(trend.first, spec.format)} in the first half of the window, ${formatValue(trend.last, spec.format)} in the second.">
         <line class="grid" x1="0" y1="${PAD}" x2="${W}" y2="${PAD}" />
         <line class="grid" x1="0" y1="${H / 2}" x2="${W}" y2="${H / 2}" />
         <line class="base" x1="0" y1="${H - PAD}" x2="${W}" y2="${H - PAD}" />
@@ -235,3 +269,19 @@ export const CHART_CSS = `
   .card .empty{font-size:13px;color:var(--ink-3);margin:0}
   @media print{.grid{break-inside:avoid}}
 `;
+
+
+/** Card spec for the per-engineer series, which carry their own line names. */
+export const cardSpecFor2 = (spec: {
+  title: string;
+  lineNames: string[];
+  format: CardSpec['format'];
+  better: CardSpec['better'];
+  note: string;
+}): CardSpec => ({
+  title: spec.title,
+  lineNames: spec.lineNames,
+  format: spec.format,
+  better: spec.better,
+  note: spec.note
+});

@@ -241,3 +241,72 @@ export function anonymise(engineers: EngineerRow[]): EngineerRow[] {
   const names = new Map(sorted.map((e, i) => [e.login, `Engineer ${i + 1}`]));
   return engineers.map((e) => ({ ...e, login: names.get(e.login) ?? e.login }));
 }
+
+
+/** The per-person charts, and what each one is for. */
+export const ENGINEER_SERIES: {
+  title: string;
+  lineNames: string[];
+  format: 'count' | 'percent' | 'minutes' | 'ratio' | 'hours';
+  better: 'lower' | 'higher' | 'neutral';
+  note: string;
+  pick: (r: EngineerRow | null) => (number | null)[];
+}[] = [
+  {
+    title: 'Wait for first review',
+    lineNames: ['p50', 'p90'],
+    format: 'minutes',
+    better: 'lower',
+    note: 'How long this person\u2019s own work sits before anyone looks. Done to them, not by them.',
+    pick: (r) => [r?.waitP50 ?? null, r?.waitP90 ?? null]
+  },
+  {
+    title: 'Review hours given',
+    lineNames: ['hours'],
+    format: 'hours',
+    better: 'neutral',
+    note: 'Their share of the review burden. Rising here is a load problem, not a merit.',
+    pick: (r) => [r ? r.reviewHoursGiven : null]
+  },
+  {
+    title: 'Their PRs merged unreviewed',
+    lineNames: ['%'],
+    format: 'percent',
+    better: 'lower',
+    note: 'Usually a queue signal: waiting got expensive enough that merging alone won.',
+    pick: (r) => [r ? r.unreviewedPct : null]
+  },
+  {
+    title: 'Given / received',
+    lineNames: ['ratio'],
+    format: 'ratio',
+    better: 'neutral',
+    note: 'Reviews given per review received. Persistently far from 1 in either direction is worth a conversation.',
+    pick: (r) => [r?.reciprocity ?? null]
+  },
+  {
+    title: 'PRs authored',
+    lineNames: ['merged'],
+    format: 'count',
+    better: 'neutral',
+    note: 'Context for the rest. Not a productivity measure - a big PR and a typo fix both count once.',
+    pick: (r) => [r ? r.authored : null]
+  },
+  {
+    title: 'Reviews given',
+    lineNames: ['count'],
+    format: 'count',
+    better: 'neutral',
+    note: 'How many pull requests they looked at.',
+    pick: (r) => [r ? r.reviewsGiven : null]
+  }
+];
+
+/** This person's row within each period, or null where they were absent. */
+export function engineerByPeriod(
+  periodPulls: PullRequest[][],
+  cfg: TaxConfig,
+  login: string
+): (EngineerRow | null)[] {
+  return periodPulls.map((pulls) => byEngineer(pulls, cfg).find((r) => r.login === login) ?? null);
+}

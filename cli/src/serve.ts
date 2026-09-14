@@ -5,6 +5,8 @@ import { churnSubset, pullKey, type ChurnResult } from './churn.js';
 import { buildLedger, type Window } from './model.js';
 import { buildSeries, defaultGranularity, type Granularity } from './series.js';
 import { renderHtml } from './report/html.js';
+import { cardSpecFor2, chartCard, type ChartPoint } from './report/charts.js';
+import { ENGINEER_SERIES, anonymise, byEngineer, engineerByPeriod } from './breakdown.js';
 
 /** Selectable ranges, in days back from the end of the fetched window. */
 export const RANGES: [label: string, days: number][] = [
@@ -34,6 +36,15 @@ export interface ServeData {
 
 const MS_PER_DAY = 86_400_000;
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
+const escapeHtml = esc;
+
+/** Length of one bucket starting at `startIso`, in milliseconds. */
+function bucketMs(g: Granularity, startIso: string): number {
+  if (g === 'day') return MS_PER_DAY;
+  if (g === 'week') return 7 * MS_PER_DAY;
+  const d = new Date(startIso);
+  return +new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)) - +d;
+}
 
 /**
  * The range and bucket pickers, as plain links.
@@ -93,7 +104,7 @@ export function serveReport(data: ServeData, port: number, note: (s: string) => 
     Math.round((+data.window.until - +data.window.since) / MS_PER_DAY)
   );
 
-  const render = (days: number, bucket: Granularity): string => {
+  const render = (days: number, bucket: Granularity, person?: string): string => {
     const until = data.window.until;
     const since = new Date(Math.max(+data.window.since, +until - days * MS_PER_DAY));
     const win: Window = { since, until };
@@ -113,6 +124,53 @@ export function serveReport(data: ServeData, port: number, note: (s: string) => 
     const ledger = buildLedger(pulls, data.cfg, win, data.repoCount, data.baseline, churn);
     const periods = buildSeries(pulls, data.cfg, win, data.repoCount, bucket, churn);
 
+    const href = (login: string) =>
+      `/?range=${days}&amp;bucket=${bucket}&amp;person=${encodeURIComponent(login)}`;
+
+    const known = new Set(byEngineer(pulls, data.cfg).map((r) => r.login));
+
+    let personView: { login: string; backHref: string; cards: string } | undefined;
+    // An unknown login silently falls back to the overview rather than drawing
+    // a page of empty charts that looks like a real answer.
+    if (person && known.has(person)) {
+      // Recompute this person's row inside each period, so the charts answer
+      // "is this changing" rather than only "what is it now".
+      const perPeriod = periods.map((period) =>
+        pulls.filter((p) => {
+          const t = +new Date(p.mergedAt);
+          return t >= +new Date(period.start) && t < +new Date(period.start) + bucketMs(bucket, period.start);
+        })
+      );
+      const rows = engineerByPeriod(perPeriod, data.cfg, person);
+      let display = person;
+      if (data.anonymise) {
+        const real = byEngineer(pulls, data.cfg);
+        const masked = anonymise(real);
+        display = masked[real.findIndex((r) => r.login === person)]?.login ?? 'Engineer';
+      }
+
+      const cards = ENGINEER_SERIES.map((spec) => {
+        const points: ChartPoint[] = periods.map((period, i) => ({
+          label: period.label,
+          full: period.full,
+          values: spec.pick(rows[i] ?? null)
+        }));
+        return chartCard(cardSpecFor2(spec), points);
+      }).join('');
+
+      personView = {
+        login: display,
+        backHref: `/?range=${days}&amp;bucket=${bucket}`,
+        cards:
+          `<h2>${escapeHtml(display)}</h2>` +
+          `<div class="warn"><p><b>These are process measurements, not a performance record.</b> ` +
+          `Wait times are something being done to this person; review load is work they are ` +
+          `absorbing. Read a worsening line as a question about the team's queue before it is a ` +
+          `question about them.</p></div>` +
+          `<div class="grid">${cards}</div>`
+      };
+    }
+
     return renderHtml(
       ledger,
       data.cfg,
@@ -124,7 +182,8 @@ export function serveReport(data: ServeData, port: number, note: (s: string) => 
       },
       periods,
       controls({ days, bucket }, fetchedDays),
-      { pulls, churn, anonymise: data.anonymise }
+      { pulls, churn, anonymise: data.anonymise, hrefFor: href },
+      personView
     );
   };
 
@@ -151,8 +210,10 @@ export function serveReport(data: ServeData, port: number, note: (s: string) => 
       const bucket: Granularity =
         b === 'day' || b === 'week' || b === 'month' ? b : defaultGranularity(days);
 
+      const person = url.searchParams.get('person') ?? undefined;
+
       try {
-        const html = render(days, bucket);
+        const html = render(days, bucket, person);
         res.writeHead(200, {
           'content-type': 'text/html; charset=utf-8',
           'cache-control': 'no-store',

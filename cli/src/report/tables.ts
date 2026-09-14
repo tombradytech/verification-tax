@@ -81,7 +81,12 @@ export function repoTable(rows: RepoRow[]): string {
   </table></div>`;
 }
 
-export function engineerTable(rows: EngineerRow[], c: Concentration): string {
+export function engineerTable(
+  rows: EngineerRow[],
+  c: Concentration,
+  /** Supplied by the portal; the static file has nowhere to link to. */
+  hrefFor?: (login: string) => string
+): string {
   if (!rows.length) return '';
   const waitWorst = threshold(rows.map((r) => r.waitP90), 'lower');
   const loadWorst = threshold(rows.map((r) => r.reviewHoursGiven), 'lower');
@@ -114,7 +119,9 @@ export function engineerTable(rows: EngineerRow[], c: Concentration): string {
     <tbody>${rows
       .map(
         (r) => `<tr>
-      <th scope="row">${esc(r.login)}</th>
+      <th scope="row">${
+        hrefFor ? `<a class="who" href="${hrefFor(r.login)}">${esc(r.login)}</a>` : esc(r.login)
+      }</th>
       <td>${num(r.authored)}</td>
       <td>${dur(r.waitP50)}</td><td${flag(r.waitP90, waitWorst, 'lower')}>${dur(r.waitP90)}</td>
       <td>${pct(r.unreviewedPct)}</td>
@@ -148,4 +155,10 @@ export const TABLE_CSS = `
   .warn p{font-size:14.5px;color:var(--ink-2);margin:0 0 8px;max-width:76ch}
   .warn p:last-child{margin-bottom:0}
   .warn b{color:var(--ink)}
+  table.brk a.who{color:var(--ink);text-decoration-thickness:1px;text-underline-offset:2px}
+  table.brk a.who:hover{color:var(--debit)}
+  .back{display:inline-block;font-family:var(--f-mono);font-size:12px;color:var(--ink-2);
+        margin:0 0 18px;text-decoration:none;border:1px solid var(--rule);padding:4px 10px;
+        background:var(--card)}
+  .back:hover{color:var(--ink);border-color:var(--ink-3)}
 `;
