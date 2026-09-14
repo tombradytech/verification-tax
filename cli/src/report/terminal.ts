@@ -25,6 +25,20 @@ export const money = (n: number, currency: string) =>
     // Intl emits a hyphen; the rest of the report uses a typographic minus.
     .replace(/^-/, '\u2212');
 
+/**
+ * Compact enough that a p50/p90 pair fits the value column. Max width is five
+ * characters, so a pair is at most "47.9h / 12.3d".
+ */
+export function durationShort(mins: number | null): string {
+  if (mins === null) return '—';
+  if (mins < 90) return `${Math.round(mins)}m`;
+  const h = mins / 60;
+  return h < 48 ? `${h.toFixed(1)}h` : `${(h / 24).toFixed(1)}d`;
+}
+
+export const durationPair = (a: number | null, b: number | null) =>
+  `${durationShort(a)} / ${durationShort(b)}`;
+
 export function duration(mins: number | null): string {
   if (mins === null) return '—';
   const h = Math.floor(mins / 60);
@@ -83,12 +97,25 @@ export function renderTerminal(
   L.push(stat('PRs merged', num(m.prsMerged)));
   L.push(
     stat(
-      'Median time to first review',
-      duration(m.medianTimeToFirstReviewMins),
+      'PR cycle time, p50/p90',
+      durationPair(m.cycleTimeP50, m.cycleTimeP90),
+      'opened to merged'
+    )
+  );
+  L.push(
+    stat(
+      'Time to first review, p50/p90',
+      durationPair(m.timeToFirstReviewP50, m.timeToFirstReviewP90),
       `${num(m.reviewedCount)} reviewed PRs`
     )
   );
-  L.push(stat('Median time in review', duration(m.medianTimeInReviewMins)));
+  L.push(
+    stat(
+      'Time in review, p50/p90',
+      durationPair(m.timeInReviewP50, m.timeInReviewP90),
+      'first review to merge'
+    )
+  );
   L.push(
     stat(
       'Merged with no human review',

@@ -8,10 +8,23 @@ export interface Metrics {
   repoCount: number;
   windowDays: number;
 
-  /** Minutes. Null when no PR in the window received a human review. */
-  medianTimeToFirstReviewMins: number | null;
-  medianTimeInReviewMins: number | null;
+  /**
+   * Minutes, p50 and p90. Null when no PR in the window received a human
+   * review. p90 matters more than the median here: the median describes the
+   * easy PRs, the p90 describes the ones people actually complain about.
+   */
+  timeToFirstReviewP50: number | null;
+  timeToFirstReviewP90: number | null;
+  timeInReviewP50: number | null;
+  timeInReviewP90: number | null;
   reviewedCount: number;
+
+  /**
+   * Open to merge, for every merged PR including the unreviewed ones. This is
+   * the number a delivery conversation is actually about.
+   */
+  cycleTimeP50: number;
+  cycleTimeP90: number;
 
   unreviewedCount: number;
   pctMergedUnreviewed: number;
@@ -59,7 +72,11 @@ function quantile(sorted: number[], q: number): number {
   return a + (b - a) * (pos - lo);
 }
 
-const median = (xs: number[]) => quantile([...xs].sort((a, b) => a - b), 0.5);
+/** p50 and p90 of an unsorted list, sorted once. */
+function pair(xs: number[]): [number, number] {
+  const sorted = [...xs].sort((a, b) => a - b);
+  return [quantile(sorted, 0.5), quantile(sorted, 0.9)];
+}
 
 /**
  * Minutes we attribute to one reviewer reading one diff.
@@ -92,6 +109,7 @@ export function computeMetrics(
 
   const ttfr: number[] = [];
   const tir: number[] = [];
+  const cycle: number[] = [];
   let unreviewed = 0;
   const sizes: number[] = [];
   const reviewMinutesBy = new Map<string, number>();
@@ -103,6 +121,7 @@ export function computeMetrics(
   for (const p of pulls) {
     const lines = p.additions + p.deletions;
     sizes.push(lines);
+    cycle.push((+new Date(p.mergedAt) - +new Date(p.createdAt)) / MS_PER_MIN);
     if (p.filesTruncated) filesTruncatedCount++;
 
     if (p.reviewers.length === 0) {
@@ -172,9 +191,14 @@ export function computeMetrics(
     repoCount,
     windowDays,
 
-    medianTimeToFirstReviewMins: ttfr.length ? median(ttfr) : null,
-    medianTimeInReviewMins: tir.length ? median(tir) : null,
+    timeToFirstReviewP50: ttfr.length ? pair(ttfr)[0] : null,
+    timeToFirstReviewP90: ttfr.length ? pair(ttfr)[1] : null,
+    timeInReviewP50: tir.length ? pair(tir)[0] : null,
+    timeInReviewP90: tir.length ? pair(tir)[1] : null,
     reviewedCount: pulls.length - unreviewed,
+
+    cycleTimeP50: pair(cycle)[0],
+    cycleTimeP90: pair(cycle)[1],
 
     unreviewedCount: unreviewed,
     pctMergedUnreviewed: pulls.length ? (unreviewed / pulls.length) * 100 : 0,

@@ -1,6 +1,6 @@
 import type { TaxConfig } from '../config.js';
 import type { Ledger } from '../model.js';
-import { duration, money } from './terminal.js';
+import { durationPair, money } from './terminal.js';
 
 const esc = (s: string) =>
   s.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]!);
@@ -24,11 +24,20 @@ export function renderHtml(
     ['Engineers', num(m.engineers), 'distinct PR authors, bots excluded'],
     ['PRs merged', num(m.prsMerged), `across ${num(m.repoCount)} repositories`],
     [
-      'Median time to first review',
-      duration(m.medianTimeToFirstReviewMins),
+      'PR cycle time, p50 / p90',
+      durationPair(m.cycleTimeP50, m.cycleTimeP90),
+      'opened to merged, every merged PR including the unreviewed ones'
+    ],
+    [
+      'Time to first review, p50 / p90',
+      durationPair(m.timeToFirstReviewP50, m.timeToFirstReviewP90),
       `${num(m.reviewedCount)} PRs received a human review`
     ],
-    ['Median time in review', duration(m.medianTimeInReviewMins), 'first review to merge'],
+    [
+      'Time in review, p50 / p90',
+      durationPair(m.timeInReviewP50, m.timeInReviewP90),
+      'first review to merge'
+    ],
     [
       'Merged with no human review',
       `${m.pctMergedUnreviewed.toFixed(1)}%`,
