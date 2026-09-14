@@ -109,11 +109,14 @@ export function chartCard(spec: SeriesSpec, periods: Period[]): string {
 
   const legend =
     spec.lines.length > 1
-      ? `<span class="lg"><i class="k1"></i>${spec.lines[0]!.name} <i class="k2"></i>${spec.lines[1]!.name}</span>`
+      ? `<span class="lg"><i class="k1"></i>${spec.lines[0]!.name}` +
+        `<i class="k2" style="margin-left:10px"></i>${spec.lines[1]!.name}</span>`
       : '';
 
   const firstLabel = periods[0]?.label ?? '';
   const lastLabel = periods.at(-1)?.label ?? '';
+
+  const midLabel = periods[Math.floor((periods.length - 1) / 2)]?.label ?? '';
 
   return `<figure class="card">
       <figcaption>
@@ -121,12 +124,24 @@ export function chartCard(spec: SeriesSpec, periods: Period[]): string {
         <span class="v">${latest}</span>
         ${trendBadge(trend, spec.better)}
       </figcaption>
+      <div class="plot">
+        <div class="yax" aria-hidden="true">
+          <span>${formatValue(max, spec.format)}</span>
+          <span>${formatValue(min + (max - min) / 2, spec.format)}</span>
+          <span>${formatValue(min, spec.format)}</span>
+        </div>
       <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
            aria-label="${spec.title}${spec.lines.length > 1 ? ' (' + primary.name + ')' : ''}: ${formatValue(trend.first, spec.format)} in the first half of the window, ${formatValue(trend.last, spec.format)} in the second.">
+        <line class="grid" x1="0" y1="${PAD}" x2="${W}" y2="${PAD}" />
+        <line class="grid" x1="0" y1="${H / 2}" x2="${W}" y2="${H / 2}" />
         <line class="base" x1="0" y1="${H - PAD}" x2="${W}" y2="${H - PAD}" />
         ${lines}
       </svg>
-      <div class="ax"><span>${firstLabel}</span>${legend}<span>${lastLabel}</span></div>
+      </div>
+      <div class="ax">
+        <span>${firstLabel}</span><span class="mid">${midLabel}</span><span>${lastLabel}</span>
+      </div>
+      ${legend}
       <p class="n">${spec.note}</p>
     </figure>`;
 }
@@ -142,16 +157,25 @@ export const CHART_CSS = `
   .card .tr.good{color:var(--credit)}
   .card .tr.bad{color:var(--debit)}
   .card .tr.flat{color:var(--ink-3)}
-  .card svg{width:100%;height:76px;display:block;overflow:visible}
+  .card .plot{display:flex;align-items:stretch;gap:6px}
+  .card .yax{display:flex;flex-direction:column;justify-content:space-between;
+             font-family:var(--f-mono);font-size:10px;line-height:1;color:var(--ink-3);
+             text-align:right;min-width:36px;padding:2px 0}
+  .card svg{width:100%;height:76px;display:block;overflow:visible;flex:1 1 auto;min-width:0}
   .card .base{stroke:var(--rule);stroke-width:1}
+  .card .grid{stroke:var(--rule-soft,var(--rule));stroke-width:1;stroke-dasharray:2 3;opacity:0.6}
   .card .l1{stroke:var(--ink);stroke-width:1.5;stroke-linejoin:round;stroke-linecap:round}
   .card .l2{stroke:var(--debit);stroke-width:1.5;stroke-dasharray:3 2;
             stroke-linejoin:round;stroke-linecap:round;fill:none}
   .card .l1d{fill:var(--ink)}
   .card .l2d{fill:var(--debit)}
-  .card .ax{display:flex;justify-content:space-between;align-items:center;gap:8px;
-            font-family:var(--f-mono);font-size:10.5px;color:var(--ink-3);margin-top:6px}
-  .card .lg i{display:inline-block;width:9px;height:2px;margin:0 4px 0 8px;vertical-align:middle}
+  .card .ax{display:flex;justify-content:space-between;align-items:center;
+            font-family:var(--f-mono);font-size:10.5px;color:var(--ink-3);
+            margin:6px 0 0 42px}
+  .card .ax .mid{color:var(--ink-3);opacity:0.75}
+  .card .lg{display:block;font-family:var(--f-mono);font-size:10.5px;color:var(--ink-3);
+            margin:6px 0 0 42px}
+  .card .lg i{display:inline-block;width:9px;height:2px;margin:0 4px 0 0;vertical-align:middle}
   .card .lg i.k1{background:var(--ink)}
   .card .lg i.k2{background:var(--debit)}
   .card .n{font-size:12.5px;color:var(--ink-3);margin:8px 0 0;max-width:none}

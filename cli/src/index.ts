@@ -43,9 +43,11 @@ OPTIONS
                           Bucket every metric by period so the report shows
                           whether each one is improving. Default: month for
                           windows over 120 days, week below that.
-  --serve [port]          After writing the report, serve it at
-                          http://localhost:7717 until you stop it. Reads no
-                          new data - it is the same file, on a port.
+  --serve [port]          After writing the report, open a local portal at
+                          http://localhost:7717 where the period (1d, 1w, 1m,
+                          3m, 6m, 9m, 1y, 2y) and bucket size can be changed.
+                          Every view re-slices the pull requests already in
+                          memory; it never calls GitHub again. Loopback only.
   --out <path>            HTML report path. Default: ./tax.html
   --no-cache              Ignore the on-disk cache and refetch.
   --json                  Emit machine-readable JSON on stdout instead.
@@ -352,7 +354,22 @@ async function main() {
   );
   note(`  ${gh.stats.calls} API calls.`);
 
-  if (args.serve !== null) await serveReport(outPath, args.serve, note);
+  if (args.serve !== null) {
+    await serveReport(
+      {
+        org: args.org,
+        pulls: main.pulls,
+        cfg: config,
+        window,
+        repoCount: main.repoCount,
+        churn,
+        baseline,
+        version: VERSION
+      },
+      args.serve,
+      note
+    );
+  }
 }
 
 main().catch((err: unknown) => {

@@ -3,6 +3,7 @@ import type { Ledger } from '../model.js';
 import { durationPair, money } from './terminal.js';
 import { SERIES, type Period } from '../series.js';
 import { CHART_CSS, chartCard } from './charts.js';
+import { CONTROL_CSS } from '../serve.js';
 
 const esc = (s: string) =>
   s.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]!);
@@ -18,7 +19,9 @@ export function renderHtml(
   ledger: Ledger,
   cfg: TaxConfig,
   meta: { org: string; windowLabel: string; generatedAt: string; version: string },
-  periods: Period[] = []
+  periods: Period[] = [],
+  /** Range/bucket pickers. Empty for the static file, which has one window. */
+  controls = ''
 ): string {
   const m = ledger.metrics;
   const cur = cfg.currency;
@@ -131,12 +134,14 @@ export function renderHtml(
   footer{margin-top:32px;font-family:var(--f-mono);font-size:11.5px;color:var(--ink-3)}
   @media print{body{background:#fff}.net,table{break-inside:avoid}}
 ${CHART_CSS}
+${CONTROL_CSS}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>The verification tax &mdash; ${esc(meta.org)}</h1>
   <p class="stamp">${esc(meta.windowLabel.toUpperCase())} &middot; GENERATED ${esc(meta.generatedAt)} &middot; verification-tax ${esc(meta.version)}</p>
+  ${controls}
 
   <h2>What your history says</h2>
   <table>

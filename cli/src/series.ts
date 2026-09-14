@@ -3,7 +3,7 @@ import type { PullRequest } from './github.js';
 import { computeMetrics, type Metrics } from './metrics.js';
 import { churnSubset, pullKey, type ChurnResult } from './churn.js';
 
-export type Granularity = 'week' | 'month';
+export type Granularity = 'day' | 'week' | 'month';
 
 export interface Period {
   /** ISO date of the first day in the bucket. */
@@ -29,24 +29,29 @@ const monthStart = (d: Date) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMo
 
 function nextBucket(d: Date, g: Granularity): Date {
   const x = new Date(d);
-  if (g === 'week') x.setUTCDate(x.getUTCDate() + 7);
+  if (g === 'day') x.setUTCDate(x.getUTCDate() + 1);
+  else if (g === 'week') x.setUTCDate(x.getUTCDate() + 7);
   else x.setUTCMonth(x.getUTCMonth() + 1);
   return x;
 }
 
-const bucketStart = (d: Date, g: Granularity) => (g === 'week' ? weekStart(d) : monthStart(d));
+const dayStart = (d: Date) =>
+  new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
 
-const labelFor = (d: Date, g: Granularity) =>
-  g === 'week'
-    ? `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`
-    : `${MONTHS[d.getUTCMonth()]} ${String(d.getUTCFullYear()).slice(2)}`;
+const bucketStart = (d: Date, g: Granularity) =>
+  g === 'day' ? dayStart(d) : g === 'week' ? weekStart(d) : monthStart(d);
+
+export const labelFor = (d: Date, g: Granularity) =>
+  g === 'month'
+    ? `${MONTHS[d.getUTCMonth()]} ${String(d.getUTCFullYear()).slice(2)}`
+    : `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
 
 /**
  * Monthly for anything over four months, weekly below that. Weekly buckets on a
  * year of data give 52 points of mostly noise; monthly on six weeks gives two.
  */
 export const defaultGranularity = (windowDays: number): Granularity =>
-  windowDays > 120 ? 'month' : 'week';
+  windowDays > 120 ? 'month' : windowDays > 21 ? 'week' : 'day';
 
 /**
  * Splits the window into periods and recomputes every metric inside each one.
