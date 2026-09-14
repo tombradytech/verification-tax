@@ -29,6 +29,17 @@ Everything that was `REPLACE-ME` in the original mockup lives in one file:
 `author` and `buttondownUsername` there and the whole site updates. The
 copyright line in `LICENSE` is the only other place a name appears.
 
+## Tests
+
+```bash
+cd cli && npm test
+```
+
+Compiles to `dist-test/` and runs `node --test`. 79 cases, no test framework
+dependency. They cover the arithmetic a wrong answer could hide in: diff
+parsing, line-level churn and its interval overlaps, percentiles, bucketing and
+trend maths, the breakdown groupings, and the cost model.
+
 ## Deploying to Cloudflare Pages
 
 Connect the GitHub repo once in the Cloudflare dashboard, then every push to

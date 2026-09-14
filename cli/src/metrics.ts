@@ -41,6 +41,16 @@ export interface Metrics {
   prSizeP50: number;
   prSizeP90: number;
 
+  /**
+   * Lines added across the window, straight from the pull requests.
+   *
+   * Deliberately NOT derived from the churn denominator: that changes meaning
+   * with --churn (added-lines under 'line', file change counts under 'file'),
+   * and the authoring credit is computed from throughput, so it would silently
+   * change with a flag that has nothing to do with it.
+   */
+  authoredLines: number;
+
   reviewMinutesTotal: number;
   /** Mean weekly review hours carried by the busiest tenth of reviewers. */
   topDecileReviewHoursPerWeek: number;
@@ -118,8 +128,10 @@ export function computeMetrics(
   let excessDelayDays = 0;
   let filesTruncatedCount = 0;
 
+  let authoredLines = 0;
   for (const p of pulls) {
     const lines = p.additions + p.deletions;
+    authoredLines += p.additions;
     sizes.push(lines);
     cycle.push((+new Date(p.mergedAt) - +new Date(p.createdAt)) / MS_PER_MIN);
     if (p.filesTruncated) filesTruncatedCount++;
@@ -210,6 +222,7 @@ export function computeMetrics(
 
     prSizeP50: Math.round(quantile(sortedSizes, 0.5)),
     prSizeP90: Math.round(quantile(sortedSizes, 0.9)),
+    authoredLines,
 
     reviewMinutesTotal,
     topDecileReviewHoursPerWeek: decileSize ? topMinutes / decileSize / 60 / weeks : 0,

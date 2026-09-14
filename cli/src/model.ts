@@ -91,9 +91,9 @@ function creditsFor(m: Metrics, baseline: Metrics | null, cfg: TaxConfig) {
   }
 
   // Lines merged per engineer per day, now versus then.
-  const rateNow = m.engineers ? m.totalLines / m.engineers / m.windowDays : 0;
+  const rateNow = m.engineers ? m.authoredLines / m.engineers / m.windowDays : 0;
   const rateThen = baseline.engineers
-    ? baseline.totalLines / baseline.engineers / baseline.windowDays
+    ? baseline.authoredLines / baseline.engineers / baseline.windowDays
     : 0;
 
   const deltaLinesPerYear = (rateNow - rateThen) * m.engineers * 365;

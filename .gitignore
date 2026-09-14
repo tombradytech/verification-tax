@@ -12,3 +12,4 @@ cli/dist/
 tax.html
 tax.config.json
 .verification-tax-cache/
+cli/dist-test/
