@@ -118,6 +118,41 @@ export function chartCard(spec: SeriesSpec, periods: Period[]): string {
 
   const midLabel = periods[Math.floor((periods.length - 1) / 2)]?.label ?? '';
 
+  // One full-height column per period. Hovering anywhere in the column shows
+  // the tooltip, so this stays usable at 90 daily points where individual dots
+  // would be three pixels apart. Pure CSS - the report ships no script.
+  const n = periods.length;
+  const colWidth = 100 / n;
+  const yPct = (v: number) => {
+    const span = max - min || 1;
+    return ((H - PAD - ((v - min) / span) * (H - PAD * 2)) / H) * 100;
+  };
+
+  const overlay = periods
+    .map((period, i) => {
+      const values = spec.lines.map((l) => l.pick(period.metrics));
+      const dots = values
+        .map((v, li) =>
+          v === null
+            ? ''
+            : `<i class="d${li + 1}" style="top:${yPct(v).toFixed(1)}%"></i>`
+        )
+        .join('');
+      const readout = spec.lines
+        .map((l, li) => `${spec.lines.length > 1 ? l.name + ' ' : ''}${formatValue(values[li] ?? null, spec.format)}`)
+        .join(' · ');
+      // Horizontally: anchor inward at the edges so the card does not clip it.
+      const side = i < n / 2 ? 'left:0' : 'right:0';
+      // Vertically: sit just above the point, or below it when the point is
+      // already near the top - otherwise the tooltip covers the card's title.
+      const primaryValue = values[values.length - 1];
+      const y = primaryValue === null || primaryValue === undefined ? 50 : yPct(primaryValue);
+      const vertical =
+        y < 45 ? `top:calc(${y.toFixed(1)}% + 10px)` : `bottom:calc(${(100 - y).toFixed(1)}% + 10px)`;
+      return `<span class="pt" style="left:${(i * colWidth).toFixed(3)}%;width:${colWidth.toFixed(3)}%">${dots}<span class="tip" style="${side};${vertical}"><b>${period.full}</b>${readout}</span></span>`;
+    })
+    .join('');
+
   return `<figure class="card">
       <figcaption>
         <span class="t">${spec.title}</span>
@@ -130,6 +165,7 @@ export function chartCard(spec: SeriesSpec, periods: Period[]): string {
           <span>${formatValue(min + (max - min) / 2, spec.format)}</span>
           <span>${formatValue(min, spec.format)}</span>
         </div>
+        <div class="canvas">
       <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
            aria-label="${spec.title}${spec.lines.length > 1 ? ' (' + primary.name + ')' : ''}: ${formatValue(trend.first, spec.format)} in the first half of the window, ${formatValue(trend.last, spec.format)} in the second.">
         <line class="grid" x1="0" y1="${PAD}" x2="${W}" y2="${PAD}" />
@@ -137,6 +173,8 @@ export function chartCard(spec: SeriesSpec, periods: Period[]): string {
         <line class="base" x1="0" y1="${H - PAD}" x2="${W}" y2="${H - PAD}" />
         ${lines}
       </svg>
+        <div class="hov" aria-hidden="true">${overlay}</div>
+      </div>
       </div>
       <div class="ax">
         <span>${firstLabel}</span><span class="mid">${midLabel}</span><span>${lastLabel}</span>
@@ -161,7 +199,22 @@ export const CHART_CSS = `
   .card .yax{display:flex;flex-direction:column;justify-content:space-between;
              font-family:var(--f-mono);font-size:10px;line-height:1;color:var(--ink-3);
              text-align:right;min-width:36px;padding:2px 0}
-  .card svg{width:100%;height:76px;display:block;overflow:visible;flex:1 1 auto;min-width:0}
+  .card .canvas{position:relative;flex:1 1 auto;min-width:0}
+  .card svg{width:100%;height:76px;display:block;overflow:visible}
+  .card .hov{position:absolute;inset:0}
+  .card .pt{position:absolute;top:0;bottom:0}
+  .card .pt i{position:absolute;left:50%;width:6px;height:6px;margin:-3px 0 0 -3px;
+              border-radius:50%;opacity:0;transition:opacity .08s}
+  .card .pt i.d1{background:var(--ink)}
+  .card .pt i.d2{background:var(--debit)}
+  .card .pt:hover i{opacity:1}
+  .card .tip{position:absolute;display:none;z-index:2;
+             background:var(--ink);color:var(--paper);padding:6px 9px;
+             font-family:var(--f-mono);font-size:11px;line-height:1.45;
+             white-space:nowrap;pointer-events:none}
+  .card .tip b{display:block;font-weight:500;opacity:0.72}
+  .card .pt:hover .tip{display:block}
+  @media (prefers-reduced-motion:reduce){.card .pt i{transition:none}}
   .card .base{stroke:var(--rule);stroke-width:1}
   .card .grid{stroke:var(--rule-soft,var(--rule));stroke-width:1;stroke-dasharray:2 3;opacity:0.6}
   .card .l1{stroke:var(--ink);stroke-width:1.5;stroke-linejoin:round;stroke-linecap:round}

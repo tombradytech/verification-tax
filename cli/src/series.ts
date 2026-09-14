@@ -10,6 +10,8 @@ export interface Period {
   start: string;
   /** Short label for an axis, e.g. "6 Jan" or "Jan 26". */
   label: string;
+  /** Unambiguous label for a tooltip, e.g. "Week of 6 Jan 2026". */
+  full: string;
   prs: number;
   metrics: Metrics;
 }
@@ -45,6 +47,22 @@ export const labelFor = (d: Date, g: Granularity) =>
   g === 'month'
     ? `${MONTHS[d.getUTCMonth()]} ${String(d.getUTCFullYear()).slice(2)}`
     : `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
+
+const FULL_MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+/** Says which day, which week, or which month - no guessing from an axis. */
+export function fullLabelFor(d: Date, g: Granularity): string {
+  const day = d.getUTCDate();
+  const month = FULL_MONTHS[d.getUTCMonth()];
+  const year = d.getUTCFullYear();
+  if (g === 'month') return `${month} ${year}`;
+  if (g === 'week') return `Week of ${day} ${month} ${year}`;
+  return `${DAYS[d.getUTCDay()]} ${day} ${month} ${year}`;
+}
 
 /**
  * Monthly for anything over four months, weekly below that. Weekly buckets on a
@@ -100,6 +118,7 @@ export function buildSeries(
       return {
         start: start.toISOString().slice(0, 10),
         label: labelFor(start, granularity),
+        full: fullLabelFor(start, granularity),
         prs: list.length,
         metrics: computeMetrics(list, cfg, { since: start, until: end }, repoCount, sub)
       };
