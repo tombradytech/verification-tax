@@ -9,14 +9,16 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
-    "node": ">=20.6.0"
+    "node": ">=18.17.0"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tombradytech/verification-tax.git"
+    "url": "git+https://github.com/tombradytech/verification-tax.git",
+    "directory": "cli"
   },
   "keywords": [
     "github",
@@ -28,10 +30,15 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch",
-    "test": "tsc -p tsconfig.test.json && node --test \"dist-test/test/**/*.test.js\""
+    "test": "tsc -p tsconfig.test.json && node --test \"dist-test/test/**/*.test.js\"",
+    "prepublishOnly": "npm run build && npm test"
   },
   "devDependencies": {
     "@types/node": "^22.20.2",
     "typescript": "^7.0.2"
+  },
+  "homepage": "https://github.com/tombradytech/verification-tax#readme",
+  "bugs": {
+    "url": "https://github.com/tombradytech/verification-tax/issues"
   }
 }

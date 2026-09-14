@@ -40,6 +40,24 @@ dependency. They cover the arithmetic a wrong answer could hide in: diff
 parsing, line-level churn and its interval overlaps, percentiles, bucketing and
 trend maths, the breakdown groupings, and the cost model.
 
+## Publishing the CLI
+
+The package lives in `cli/` and publishes from there. `prepublishOnly` rebuilds
+and runs the tests, so `dist/` cannot go stale and a failing suite blocks the
+publish.
+
+```bash
+cd cli
+npm login          # your npm account; needed once
+npm publish
+```
+
+Check what would ship first with `npm publish --dry-run` — it should be 17
+files and about 36 kB, `dist/` plus README and LICENSE, with no source or tests.
+
+The version is read from `cli/package.json` at runtime, so `npm version patch`
+is the only place it needs changing.
+
 ## Deploying to Cloudflare Pages
 
 Connect the GitHub repo once in the Cloudflare dashboard, then every push to

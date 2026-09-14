@@ -8,9 +8,8 @@ import { renderTerminal } from './report/terminal.js';
 import { renderHtml } from './report/html.js';
 import { computeLineChurn, type ChurnResult, type PullDiff } from './churn.js';
 import { buildSeries, defaultGranularity, type Granularity, type Period } from './series.js';
+import { VERSION } from './version.js';
 import { serveReport } from './serve.js';
-
-const VERSION = '0.1.0';
 
 const HELP = `
 verification-tax ${VERSION}
