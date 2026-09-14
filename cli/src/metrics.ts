@@ -62,7 +62,7 @@ export interface Metrics {
 const MS_PER_MIN = 60_000;
 const MS_PER_DAY = 86_400_000;
 
-function quantile(sorted: number[], q: number): number {
+export function quantile(sorted: number[], q: number): number {
   if (!sorted.length) return 0;
   const pos = (sorted.length - 1) * q;
   const lo = Math.floor(pos);

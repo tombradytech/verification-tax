@@ -48,6 +48,9 @@ OPTIONS
                           3m, 6m, 9m, 1y, 2y) and bucket size can be changed.
                           Every view re-slices the pull requests already in
                           memory; it never calls GitHub again. Loopback only.
+  --anonymise             Replace logins with "Engineer 1", "Engineer 2" in the
+                          by-person table, so the report can be shared without
+                          naming anyone. The mapping is stable within a run.
   --out <path>            HTML report path. Default: ./tax.html
   --no-cache              Ignore the on-disk cache and refetch.
   --json                  Emit machine-readable JSON on stdout instead.
@@ -73,6 +76,7 @@ interface Args {
   churn: 'file' | 'line';
   series: Granularity | 'off' | 'auto';
   serve: number | null;
+  anonymise: boolean;
   cache: boolean;
   json: boolean;
   help: boolean;
@@ -86,6 +90,7 @@ function parseArgs(argv: string[]): Args {
     churn: 'line',
     series: 'auto',
     serve: null,
+    anonymise: false,
     cache: true,
     json: false,
     help: false,
@@ -124,6 +129,7 @@ function parseArgs(argv: string[]): Args {
         a.serve = peek && /^\d+$/.test(peek) ? Number(argv[++i]) : 7717;
         break;
       }
+      case '--anonymise': case '--anonymize': a.anonymise = true; break;
       case '--no-cache': a.cache = false; break;
       case '--json': a.json = true; break;
       case '--benchmark': a.benchmark = true; break;
@@ -322,7 +328,9 @@ async function main() {
         generatedAt: new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC',
         version: VERSION
       },
-      periods
+      periods,
+      '',
+      { pulls: main.pulls, churn, anonymise: args.anonymise }
     ),
     'utf8'
   );
@@ -364,7 +372,8 @@ async function main() {
         repoCount: main.repoCount,
         churn,
         baseline,
-        version: VERSION
+        version: VERSION,
+        anonymise: args.anonymise
       },
       args.serve,
       note

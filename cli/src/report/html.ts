@@ -4,6 +4,10 @@ import { durationPair, money } from './terminal.js';
 import { SERIES, type Period } from '../series.js';
 import { CHART_CSS, chartCard } from './charts.js';
 import { CONTROL_CSS } from '../serve.js';
+import { TABLE_CSS, engineerTable, repoTable, sizeTable } from './tables.js';
+import { anonymise, byEngineer, byRepo, bySize, concentrationOf } from '../breakdown.js';
+import type { PullRequest } from '../github.js';
+import type { ChurnResult } from '../churn.js';
 
 const esc = (s: string) =>
   s.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]!);
@@ -21,7 +25,9 @@ export function renderHtml(
   meta: { org: string; windowLabel: string; generatedAt: string; version: string },
   periods: Period[] = [],
   /** Range/bucket pickers. Empty for the static file, which has one window. */
-  controls = ''
+  controls = '',
+  /** Supplying the raw pulls turns on the by-repo, by-size and by-person tables. */
+  breakdowns?: { pulls: PullRequest[]; churn?: ChurnResult; anonymise: boolean }
 ): string {
   const m = ledger.metrics;
   const cur = cfg.currency;
@@ -135,6 +141,7 @@ export function renderHtml(
   @media print{body{background:#fff}.net,table{break-inside:avoid}}
 ${CHART_CSS}
 ${CONTROL_CSS}
+${TABLE_CSS}
 </style>
 </head>
 <body>
@@ -165,6 +172,22 @@ ${CONTROL_CSS}
     ${periods.length} PERIODS &middot; TREND COMPARES THE MEAN OF THE FIRST HALF OF THE WINDOW
     WITH THE SECOND, NOT THE FIRST POINT WITH THE LAST
   </p>`
+      : ''
+  }
+
+  ${
+    breakdowns
+      ? (() => {
+          const engineers = byEngineer(breakdowns.pulls, cfg);
+          return (
+            sizeTable(bySize(breakdowns.pulls, cfg, breakdowns.churn)) +
+            repoTable(byRepo(breakdowns.pulls, cfg, breakdowns.churn)) +
+            engineerTable(
+              breakdowns.anonymise ? anonymise(engineers) : engineers,
+              concentrationOf(engineers)
+            )
+          );
+        })()
       : ''
   }
 

@@ -29,6 +29,7 @@ export interface ServeData {
   churn?: ChurnResult;
   baseline: { pulls: PullRequest[]; window: Window; repoCount: number } | null;
   version: string;
+  anonymise: boolean;
 }
 
 const MS_PER_DAY = 86_400_000;
@@ -122,7 +123,8 @@ export function serveReport(data: ServeData, port: number, note: (s: string) => 
         version: data.version
       },
       periods,
-      controls({ days, bucket }, fetchedDays)
+      controls({ days, bucket }, fetchedDays),
+      { pulls, churn, anonymise: data.anonymise }
     );
   };
 
