@@ -1,5 +1,6 @@
 import type { TaxConfig } from '../config.js';
 import type { Ledger } from '../model.js';
+import { SERIES, trendOf, type Period } from '../series.js';
 
 const useColour = Boolean(process.stdout.isTTY) && !process.env.NO_COLOR;
 const wrap = (code: string) => (s: string) => (useColour ? `\x1b[${code}m${s}\x1b[0m` : s);
@@ -73,10 +74,27 @@ function ledgerLine(
   return note ? line + '  ' + dim(note) : line;
 }
 
+const SPARK = '▁▂▃▄▅▆▇█';
+
+/** A run of block characters, scaled from zero so flat series look flat. */
+function sparkline(values: (number | null)[]): string {
+  const real = values.filter((v): v is number => v !== null);
+  if (real.length < 2) return '';
+  const min = Math.min(0, ...real);
+  const max = Math.max(...real);
+  const span = max - min || 1;
+  return values
+    .map((v) =>
+      v === null ? ' ' : SPARK[Math.min(7, Math.floor(((v - min) / span) * 7.999))]
+    )
+    .join('');
+}
+
 export function renderTerminal(
   ledger: Ledger,
   cfg: TaxConfig,
-  meta: { org: string; windowLabel: string; reportPath: string; configPath: string; cached: boolean }
+  meta: { org: string; windowLabel: string; reportPath: string; configPath: string; cached: boolean },
+  periods: Period[] = []
 ): string {
   const m = ledger.metrics;
   const cur = cfg.currency;
@@ -155,6 +173,31 @@ export function renderTerminal(
   );
   L.push('');
 
+  if (periods.length > 1) {
+    L.push('');
+    L.push(bold(`  TREND  ${periods.length} periods, ${periods[0]!.label} to ${periods.at(-1)!.label}`));
+    L.push('');
+    for (const spec of SERIES) {
+      // Match the charts: on a pair, the p90 is the series worth watching.
+      const primary = spec.lines.at(-1)!;
+      const values = periods.map((p) => primary.pick(p.metrics));
+      const spark = sparkline(values);
+      if (!spark) continue;
+      const t = trendOf(periods, primary.pick);
+      let badge = '';
+      if (t.change !== null && Number.isFinite(t.change) && Math.abs(t.change) >= 0.05) {
+        const up = t.change > 0;
+        const good = spec.better === 'neutral' ? null : (spec.better === 'lower') === !up;
+        const text = `${up ? '▲' : '▼'} ${Math.abs(t.change * 100).toFixed(0)}%`;
+        badge = good === null ? dim(text) : good ? green(text) : red(text);
+      } else {
+        badge = dim('flat');
+      }
+      L.push(padTo('  ' + spec.title, 30) + spark + '  ' + badge);
+    }
+  }
+
+  L.push('');
   L.push(bold('  DEBITS'));
   L.push('');
   for (const d of ledger.debits) {

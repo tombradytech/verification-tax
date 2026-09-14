@@ -7,6 +7,8 @@ import { buildLedger, type Window } from './model.js';
 import { renderTerminal } from './report/terminal.js';
 import { renderHtml } from './report/html.js';
 import { computeLineChurn, type ChurnResult, type PullDiff } from './churn.js';
+import { buildSeries, defaultGranularity, type Granularity, type Period } from './series.js';
+import { serveReport } from './serve.js';
 
 const VERSION = '0.1.0';
 
@@ -37,6 +39,13 @@ OPTIONS
                           over long windows and drifts toward 100%, so treat it
                           as a rough upper bound rather than a figure to quote.
                           Neither mode transmits anything.
+  --series <week|month|off>
+                          Bucket every metric by period so the report shows
+                          whether each one is improving. Default: month for
+                          windows over 120 days, week below that.
+  --serve [port]          After writing the report, serve it at
+                          http://localhost:7717 until you stop it. Reads no
+                          new data - it is the same file, on a port.
   --out <path>            HTML report path. Default: ./tax.html
   --no-cache              Ignore the on-disk cache and refetch.
   --json                  Emit machine-readable JSON on stdout instead.
@@ -60,6 +69,8 @@ interface Args {
   baseline?: string;
   out: string;
   churn: 'file' | 'line';
+  series: Granularity | 'off' | 'auto';
+  serve: number | null;
   cache: boolean;
   json: boolean;
   help: boolean;
@@ -71,6 +82,8 @@ function parseArgs(argv: string[]): Args {
   const a: Args = {
     out: 'tax.html',
     churn: 'line',
+    series: 'auto',
+    serve: null,
     cache: true,
     json: false,
     help: false,
@@ -94,6 +107,19 @@ function parseArgs(argv: string[]): Args {
         const v = next();
         if (v !== 'file' && v !== 'line') throw new Error("--churn must be 'line' or 'file'");
         a.churn = v;
+        break;
+      }
+      case '--series': {
+        const v = next();
+        if (v !== 'week' && v !== 'month' && v !== 'off') {
+          throw new Error("--series must be 'week', 'month' or 'off'");
+        }
+        a.series = v;
+        break;
+      }
+      case '--serve': {
+        const peek = argv[i + 1];
+        a.serve = peek && /^\d+$/.test(peek) ? Number(argv[++i]) : 7717;
         break;
       }
       case '--no-cache': a.cache = false; break;
@@ -273,17 +299,29 @@ async function main() {
   }
 
   const ledger = buildLedger(main.pulls, config, window, main.repoCount, baseline, churn);
+
+  const granularity: Granularity =
+    args.series === 'auto' ? defaultGranularity(ledger.metrics.windowDays) : (args.series as Granularity);
+  const periods: Period[] =
+    args.series === 'off'
+      ? []
+      : buildSeries(main.pulls, config, window, main.repoCount, granularity, churn);
   const outPath = resolve(cwd, args.out);
   const rel = (p: string) => './' + relative(cwd, p);
 
   await writeFile(
     outPath,
-    renderHtml(ledger, config, {
-      org: args.org,
-      windowLabel: label(window),
-      generatedAt: new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC',
-      version: VERSION
-    }),
+    renderHtml(
+      ledger,
+      config,
+      {
+        org: args.org,
+        windowLabel: label(window),
+        generatedAt: new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC',
+        version: VERSION
+      },
+      periods
+    ),
     'utf8'
   );
 
@@ -299,15 +337,22 @@ async function main() {
   }
 
   process.stdout.write(
-    renderTerminal(ledger, config, {
-      org: args.org,
-      windowLabel: label(window),
-      reportPath: rel(outPath),
-      configPath: './' + CONFIG_FILE,
-      cached: main.fromCache
-    })
+    renderTerminal(
+      ledger,
+      config,
+      {
+        org: args.org,
+        windowLabel: label(window),
+        reportPath: rel(outPath),
+        configPath: './' + CONFIG_FILE,
+        cached: main.fromCache
+      },
+      periods
+    )
   );
   note(`  ${gh.stats.calls} API calls.`);
+
+  if (args.serve !== null) await serveReport(outPath, args.serve, note);
 }
 
 main().catch((err: unknown) => {

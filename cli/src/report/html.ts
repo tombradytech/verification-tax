@@ -1,6 +1,8 @@
 import type { TaxConfig } from '../config.js';
 import type { Ledger } from '../model.js';
 import { durationPair, money } from './terminal.js';
+import { SERIES, type Period } from '../series.js';
+import { CHART_CSS, chartCard } from './charts.js';
 
 const esc = (s: string) =>
   s.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]!);
@@ -15,7 +17,8 @@ const num = (n: number) => n.toLocaleString('en-IE');
 export function renderHtml(
   ledger: Ledger,
   cfg: TaxConfig,
-  meta: { org: string; windowLabel: string; generatedAt: string; version: string }
+  meta: { org: string; windowLabel: string; generatedAt: string; version: string },
+  periods: Period[] = []
 ): string {
   const m = ledger.metrics;
   const cur = cfg.currency;
@@ -127,6 +130,7 @@ export function renderHtml(
   .caveats b{color:var(--ink)}
   footer{margin-top:32px;font-family:var(--f-mono);font-size:11.5px;color:var(--ink-3)}
   @media print{body{background:#fff}.net,table{break-inside:avoid}}
+${CHART_CSS}
 </style>
 </head>
 <body>
@@ -147,6 +151,17 @@ export function renderHtml(
         .join('\n      ')}
     </tbody>
   </table>
+
+  ${
+    periods.length > 1
+      ? `<h2>Is it getting better or worse</h2>
+  <div class="grid">${SERIES.map((spec) => chartCard(spec, periods)).join('')}</div>
+  <p class="stamp" style="margin-top:12px">
+    ${periods.length} PERIODS &middot; TREND COMPARES THE MEAN OF THE FIRST HALF OF THE WINDOW
+    WITH THE SECOND, NOT THE FIRST POINT WITH THE LAST
+  </p>`
+      : ''
+  }
 
   <h2>Debits</h2>
   <table>
